@@ -1,25 +1,57 @@
-import { createProgram } from "typescript";
+import ts, { createProgram, getPreEmitDiagnostics, formatDiagnosticsWithColorAndContext } from "typescript";
 import { writeFileSync } from "fs";
-import { resolve } from "path";
+import { dirname, relative, resolve } from "path";
 import assert from "assert";
 
 import { Codegen } from "./codegen";
 import { serializeProgram } from "./bytecode/serialization/program";
+import { Bytecode } from "./bytecode/structs";
 
-const filePath = process.argv[2];
-assert(filePath, "Empty file path");
+function handleDiagnostics(program: ts.Program): boolean {
+  const emitResult = program.emit();
+  const allDiagnostics = getPreEmitDiagnostics(program).concat(emitResult.diagnostics)
+  console.log(formatDiagnosticsWithColorAndContext(allDiagnostics, {
+    getCurrentDirectory: () => process.cwd(),
+    getCanonicalFileName: fileName => fileName,
+    getNewLine: () => "\n",
+  }));
 
-const program = createProgram({
-  rootNames: [resolve(filePath)],
-  options: { strict: true }
-});
+  return !allDiagnostics.some(d => d.category === ts.DiagnosticCategory.Error);
+}
 
-const codegen = new Codegen(program, 8);
-const file = program.getSourceFile(filePath);
-assert(file, `Could not find source file ${filePath}`);
+type GenerationResult = {
+  readonly ok: false;
+  readonly bytecode?: undefined;
+} | {
+  readonly ok: true;
+  readonly bytecode: Bytecode;
+}
 
-const bytecode = codegen.generate(file);
-const buf = serializeProgram(bytecode);
-console.log(bytecode);
-console.log(buf);
-writeFileSync("../../rust/ryde/out.bin", buf); // so we can test it in the vm immediately
+function generateBytecode(): GenerationResult {
+  const filePath = relative(dirname(__dirname), resolve(process.argv[2] ?? ""));
+  assert(filePath, "Empty file path");
+
+  const program = createProgram({
+    rootNames: [filePath],
+    options: { strict: true, noEmit: true }
+  });
+
+  const codegen = new Codegen(program, 8);
+  const file = program.getSourceFile(filePath);
+  assert(file, `Could not find source file ${filePath}`);
+
+  const bytecode = codegen.generate(file);
+  const ok = handleDiagnostics(program);
+  return ok ? { ok, bytecode } : { ok };
+}
+
+function writeBinary(bytecode: Bytecode): void {
+  const buf = serializeProgram(bytecode);
+  console.log("Emitted bytecode:", bytecode);
+  console.log("Writing binary:", buf);
+  writeFileSync("../../rust/ryde/out.bin", buf); // so we can test it in the vm immediately
+}
+
+const { ok, bytecode } = generateBytecode();
+if (ok)
+  writeBinary(bytecode);
