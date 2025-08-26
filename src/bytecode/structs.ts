@@ -21,6 +21,7 @@ export const enum InstructionOp {
   NOT,
 
   STORE,
+  LOAD,
 
   PRINT,
   HALT

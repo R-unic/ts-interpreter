@@ -24,6 +24,7 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     offset += bytesWritten;
   } else if (isSTORE(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.source);
+    offset += writeVarInt(buffer, offset, instruction.name.length);
     offset += buffer.write(instruction.name, offset);
   }
 
