@@ -20,6 +20,5 @@ export function visitVariableDeclaration(codegen: Codegen, node: ts.VariableDecl
     throw new Error("Binding patterns not yet supported");
 
   codegen.pushInstruction(STORE(sourceRegister, node.name.text));
-  if (!node.initializer) // probably should not be responsible for freeing the register unless it's an uninitialized variable
-    codegen.freeRegister(sourceRegister);
+  codegen.freeRegister(sourceRegister);
 }

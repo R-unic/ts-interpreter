@@ -20,6 +20,9 @@ export enum InstructionOp {
   GTE,
   NOT,
 
+  JMP,
+  JZ,
+  JNZ,
   STORE,
   LOAD,
 

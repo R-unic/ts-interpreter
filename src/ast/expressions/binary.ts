@@ -13,7 +13,13 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.AsteriskToken]: InstructionOp.MUL,
   [ts.SyntaxKind.SlashToken]: InstructionOp.DIV,
   [ts.SyntaxKind.PercentToken]: InstructionOp.MOD,
-  [ts.SyntaxKind.AsteriskAsteriskToken]: InstructionOp.POW
+  [ts.SyntaxKind.AsteriskAsteriskToken]: InstructionOp.POW,
+  [ts.SyntaxKind.LessThanToken]: InstructionOp.LT,
+  [ts.SyntaxKind.LessThanEqualsToken]: InstructionOp.LTE,
+  [ts.SyntaxKind.GreaterThanToken]: InstructionOp.GT,
+  [ts.SyntaxKind.GreaterThanEqualsToken]: InstructionOp.GTE,
+  [ts.SyntaxKind.EqualsEqualsToken]: InstructionOp.EQ,
+  [ts.SyntaxKind.ExclamationEqualsEqualsToken]: InstructionOp.NEQ,
 };
 
 export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpression): void {

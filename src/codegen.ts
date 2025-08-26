@@ -4,7 +4,8 @@ import ts, {
   isBinaryExpression,
   isNumericLiteral,
   isVariableDeclaration,
-  isIdentifier
+  isIdentifier,
+  isWhileStatement
 } from "typescript";
 
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
@@ -16,6 +17,7 @@ import { PRINT } from "@/bytecode/instructions/print";
 import { HALT } from "@/bytecode/instructions/halt";
 import type { Bytecode, Instruction } from "@/bytecode/structs";
 import { visitIdentifier } from "./ast/expressions/identifier";
+import { visitWhileStatement } from "./ast/statements/while";
 
 export class Codegen {
   private emitResult: Instruction[] = [];
@@ -61,6 +63,10 @@ export class Codegen {
     ts.forEachChild(node, node => this.visit(node));
   }
 
+  public insertInstruction(index: number, instruction: Instruction): void {
+    this.emitResult.splice(index + 1, 0, instruction);
+  }
+
   public pushInstruction(instruction: Instruction): void {
     this.emitResult.push(instruction);
   }
@@ -89,6 +95,10 @@ export class Codegen {
       this.freeRegister(i);
   }
 
+  public currentIndex(): number {
+    return this.emitResult.length - 1;
+  }
+
   private visitExpression(node: ts.Expression): void {
     if (isBinaryExpression(node))
       return visitBinaryExpression(this, node);
@@ -105,6 +115,9 @@ export class Codegen {
   }
 
   private visitStatement(node: ts.Statement): void {
+    if (isWhileStatement(node))
+      return visitWhileStatement(this, node);
+
     this.visitChildren(node);
   }
 

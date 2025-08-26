@@ -24,7 +24,10 @@ export function bytecodeToString(bytecode: Bytecode): string {
     indent++;
   }
 
+  let i = 0;
   for (const instruction of bytecode) {
+    output.push((i++).toString());
+    output.push(": ");
     output.push("\t".repeat(indent));
     output.push(instruction.toString());
     if (!expanded) continue;
