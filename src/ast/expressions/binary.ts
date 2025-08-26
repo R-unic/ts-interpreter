@@ -2,7 +2,7 @@ import ts from "typescript";
 
 import { getTargetRegister } from "@/bytecode/utility";
 import { InstructionOp } from "@/bytecode/structs";
-import { ADD } from "@/bytecode/instructions/add";
+import { ADD, binaryInstruction } from "@/bytecode/instructions/binary";
 import type { Codegen } from "@/codegen";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
@@ -17,13 +17,20 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
 export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpression): void {
   const left = codegen.visit(node.left);
   const right = codegen.visit(node.right);
-  const op = OPERATOR_OPCODE_MAP[node.operatorToken.kind];
-  if (op === undefined)
-    throw new Error(`Unsupported binary operator ${ts.SyntaxKind[node.operatorToken.kind]}`);
-
   const leftRegister = getTargetRegister(left);
   const rightRegister = getTargetRegister(right);
+  switch (node.operatorToken.kind) {
+    default: {
+      const op = OPERATOR_OPCODE_MAP[node.operatorToken.kind];
+      if (op === undefined)
+        throw new Error(`Unsupported binary operator ${ts.SyntaxKind[node.operatorToken.kind]}`);
+
+      // replace the left register value with the result
+      codegen.pushInstruction(binaryInstruction(op, leftRegister, leftRegister, rightRegister));
+      break;
+    }
+  }
+
+  // free the right value (we don't need it anymore)
   codegen.freeRegister(rightRegister);
-  codegen.pushInstruction(ADD(leftRegister, leftRegister, rightRegister));
-  // replace the left register value with the result, free the right value (we don't need it anymore)
 }
