@@ -8,32 +8,6 @@ import { PRINT } from "./bytecode/instructions/print";
 import { HALT } from "./bytecode/instructions/halt";
 import type { Bytecode, Instruction } from "./bytecode/structs";
 
-function visitExpression(codegen: Codegen, node: ts.Expression): void {
-  if (isBinaryExpression(node))
-    return visitBinaryExpression(codegen, node);
-  else if (isNumericLiteral(node))
-    return visitNumericLiteral(codegen, node);
-  else if (node.kind === ts.SyntaxKind.TrueKeyword)
-    return visitTrueLiteral(codegen, node as never);
-  else if (node.kind === ts.SyntaxKind.FalseKeyword)
-    return visitFalseLiteral(codegen, node as never);
-
-  codegen.generateChildren(node);
-}
-
-function visitStatement(codegen: Codegen, node: ts.Statement): void {
-  codegen.generateChildren(node);
-}
-
-function visit(codegen: Codegen, node: ts.Node): void {
-  if (isStatement(node))
-    return visitStatement(codegen, node);
-  else if (isExpression(node))
-    return visitExpression(codegen, node);
-
-  codegen.generateChildren(node);
-}
-
 export class Codegen {
   private emitResult: Instruction[] = [];
   private allocatedRegisters = new Set<number>;
@@ -45,22 +19,30 @@ export class Codegen {
   ) { }
 
   public generate(sourceFile: ts.SourceFile): Bytecode {
-    visit(this, sourceFile);
+    this.visit(sourceFile);
     // this.emitResult.push(PRINT(0)); // temporary
     this.emitResult.push(HALT);
     const result = this.emitResult;
-    this.emitResult = [];
+    this.reset();
 
     return result;
   }
 
   public visit(node: ts.Node): Instruction {
-    visit(this, node);
-    return this.emitResult.at(-1)!;
+    if (isStatement(node)) {
+      this.visitStatement(node);
+      return this.lastInstruction();
+    } else if (isExpression(node)) {
+      this.visitExpression(node);
+      return this.lastInstruction();
+    }
+
+    this.generateChildren(node);
+    return this.lastInstruction();
   }
 
   public generateChildren<T extends ts.Node>(node: T): void {
-    ts.forEachChild(node, node => visit(this, node));
+    ts.forEachChild(node, node => this.visit(node));
   }
 
   public pushInstruction(instruction: Instruction): void {
@@ -89,5 +71,32 @@ export class Codegen {
   public freeRegisterRange(start: number, end: number): void {
     for (let i = start; i <= end; i++)
       this.freeRegister(i);
+  }
+
+  private visitExpression(node: ts.Expression): void {
+    if (isBinaryExpression(node))
+      return visitBinaryExpression(this, node);
+    else if (isNumericLiteral(node))
+      return visitNumericLiteral(this, node);
+    else if (node.kind === ts.SyntaxKind.TrueKeyword)
+      return visitTrueLiteral(this, node as never);
+    else if (node.kind === ts.SyntaxKind.FalseKeyword)
+      return visitFalseLiteral(this, node as never);
+
+    this.generateChildren(node);
+  }
+
+  private visitStatement(node: ts.Statement): void {
+    this.generateChildren(node);
+  }
+
+  private lastInstruction(): Instruction {
+    return this.emitResult.at(-1)!;
+  }
+
+  private reset(): void {
+    this.emitResult = [];
+    this.allocatedRegisters = new Set;
+    this.closestFreeRegister = 0;
   }
 }
