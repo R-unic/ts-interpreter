@@ -1,8 +1,10 @@
 import ts, { isBinaryExpression, isExpression, isNumericLiteral, isStatement } from "typescript";
 
-import { visitBinaryExpression } from "./ast/expressions/binary";
-import type { Bytecode, Instruction } from "./bytecode/structs";
 import { visitNumericLiteral } from "./ast/expressions/numeric-literal";
+import { visitBinaryExpression } from "./ast/expressions/binary";
+import { PRINT } from "./bytecode/print";
+import { HALT } from "./bytecode/halt";
+import type { Bytecode, Instruction } from "./bytecode/structs";
 
 export class Codegen {
   private emitResult: Instruction[] = [];
@@ -16,7 +18,12 @@ export class Codegen {
 
   public generate(sourceFile: ts.SourceFile): Bytecode {
     visit(this, sourceFile);
-    return this.emitResult;
+    // this.emitResult.push(PRINT(0)); // temporary
+    // this.emitResult.push(HALT);
+    const result = this.emitResult;
+    this.emitResult = [];
+
+    return result;
   }
 
   public visit(node: ts.Node): Instruction {

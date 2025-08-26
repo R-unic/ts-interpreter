@@ -3,6 +3,7 @@ import assert from "assert";
 import path from "path";
 
 import { Codegen } from "./codegen";
+import { serializeProgram } from "./bytecode/serialization/program";
 
 const filePath = process.argv[2];
 assert(filePath, "Invalid file path");
@@ -17,4 +18,6 @@ const file = program.getSourceFile(filePath);
 assert(file, `Could not find source file ${filePath}`)
 
 const bytecode = codegen.generate(file);
+const buf = serializeProgram(bytecode);
 console.log(bytecode);
+console.log(buf);

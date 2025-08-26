@@ -8,7 +8,20 @@ export const enum InstructionOp {
   IDIV,
   POW,
   MOD,
-  NEGATE
+  NEGATE,
+
+  AND,
+  OR,
+  EQ,
+  NEQ,
+  LT,
+  LTE,
+  GT,
+  GTE,
+  NOT,
+
+  PRINT,
+  HALT
 }
 
 export interface Instruction {
