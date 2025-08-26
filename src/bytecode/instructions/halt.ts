@@ -1,4 +1,4 @@
-import { InstructionOp, type Instruction } from "./structs";
+import { InstructionOp, type Instruction } from "../structs";
 
 export interface InstructionHALT extends Instruction {
   readonly op: InstructionOp.HALT;

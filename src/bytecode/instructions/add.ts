@@ -1,4 +1,4 @@
-import { InstructionOp, type BinaryInstruction, type Instruction } from "./structs";
+import { InstructionOp, type BinaryInstruction, type Instruction } from "../structs";
 
 export interface InstructionADD extends BinaryInstruction {
   readonly op: InstructionOp.ADD;

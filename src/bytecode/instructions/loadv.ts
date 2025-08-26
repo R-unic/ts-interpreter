@@ -1,5 +1,5 @@
-import { InstructionOp, type Instruction } from "./structs";
-import type { VmValue } from "./vm-value";
+import { InstructionOp, type Instruction } from "../structs";
+import type { VmValue } from "../vm-value";
 
 export interface InstructionLOADV extends Instruction {
   readonly op: InstructionOp.LOADV;

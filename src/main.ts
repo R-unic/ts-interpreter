@@ -4,6 +4,7 @@ import path from "path";
 
 import { Codegen } from "./codegen";
 import { serializeProgram } from "./bytecode/serialization/program";
+import { writeFileSync } from "fs";
 
 const filePath = process.argv[2];
 assert(filePath, "Invalid file path");
@@ -21,3 +22,4 @@ const bytecode = codegen.generate(file);
 const buf = serializeProgram(bytecode);
 console.log(bytecode);
 console.log(buf);
+writeFileSync("../../rust/ryde/out.bin", buf);

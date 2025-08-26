@@ -2,8 +2,8 @@ import ts, { isBinaryExpression, isExpression, isNumericLiteral, isStatement } f
 
 import { visitNumericLiteral } from "./ast/expressions/numeric-literal";
 import { visitBinaryExpression } from "./ast/expressions/binary";
-import { PRINT } from "./bytecode/print";
-import { HALT } from "./bytecode/halt";
+import { PRINT } from "./bytecode/instructions/print";
+import { HALT } from "./bytecode/instructions/halt";
 import type { Bytecode, Instruction } from "./bytecode/structs";
 
 export class Codegen {
@@ -18,8 +18,8 @@ export class Codegen {
 
   public generate(sourceFile: ts.SourceFile): Bytecode {
     visit(this, sourceFile);
-    // this.emitResult.push(PRINT(0)); // temporary
-    // this.emitResult.push(HALT);
+    this.emitResult.push(PRINT(0)); // temporary
+    this.emitResult.push(HALT);
     const result = this.emitResult;
     this.emitResult = [];
 

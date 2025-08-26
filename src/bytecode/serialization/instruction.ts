@@ -1,7 +1,7 @@
 import { writeVarInt } from "./utility";
 import { isBinaryInstruction, maybeGetTargetRegister } from "../utility";
 import { serializeVmValue } from "./vm-value";
-import { isLOADV } from "../loadv";
+import { isLOADV } from "../instructions/loadv";
 import type { Instruction } from "../structs";
 
 export function serializeInstruction(instruction: Instruction): { result: Buffer, bytesWritten: number; } {

@@ -1,7 +1,7 @@
 import type ts from "typescript";
 
-import { LOADV } from "../../bytecode/loadv";
 import { vmValue, VmValueKind } from "../../bytecode/vm-value";
+import { LOADV } from "../../bytecode/instructions/loadv";
 import type { Codegen } from "../../codegen";
 
 export function visitNumericLiteral(codegen: Codegen, node: ts.NumericLiteral): void {
