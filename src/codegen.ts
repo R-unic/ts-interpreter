@@ -1,10 +1,38 @@
 import ts, { isBinaryExpression, isExpression, isNumericLiteral, isStatement } from "typescript";
 
+import { visitTrueLiteral } from "./ast/expressions/true-literal";
+import { visitFalseLiteral } from "./ast/expressions/false-literal";
 import { visitNumericLiteral } from "./ast/expressions/numeric-literal";
 import { visitBinaryExpression } from "./ast/expressions/binary";
 import { PRINT } from "./bytecode/instructions/print";
 import { HALT } from "./bytecode/instructions/halt";
 import type { Bytecode, Instruction } from "./bytecode/structs";
+
+function visitExpression(codegen: Codegen, node: ts.Expression): void {
+  if (isBinaryExpression(node))
+    return visitBinaryExpression(codegen, node);
+  else if (isNumericLiteral(node))
+    return visitNumericLiteral(codegen, node);
+  else if (node.kind === ts.SyntaxKind.TrueKeyword)
+    return visitTrueLiteral(codegen, node as never);
+  else if (node.kind === ts.SyntaxKind.FalseKeyword)
+    return visitFalseLiteral(codegen, node as never);
+
+  codegen.generateChildren(node);
+}
+
+function visitStatement(codegen: Codegen, node: ts.Statement): void {
+  codegen.generateChildren(node);
+}
+
+function visit(codegen: Codegen, node: ts.Node): void {
+  if (isStatement(node))
+    return visitStatement(codegen, node);
+  else if (isExpression(node))
+    return visitExpression(codegen, node);
+
+  codegen.generateChildren(node);
+}
 
 export class Codegen {
   private emitResult: Instruction[] = [];
@@ -18,7 +46,7 @@ export class Codegen {
 
   public generate(sourceFile: ts.SourceFile): Bytecode {
     visit(this, sourceFile);
-    this.emitResult.push(PRINT(0)); // temporary
+    // this.emitResult.push(PRINT(0)); // temporary
     this.emitResult.push(HALT);
     const result = this.emitResult;
     this.emitResult = [];
@@ -62,26 +90,4 @@ export class Codegen {
     for (let i = start; i <= end; i++)
       this.freeRegister(i);
   }
-}
-
-function visitExpression(codegen: Codegen, node: ts.Expression): void {
-  if (isBinaryExpression(node))
-    return visitBinaryExpression(codegen, node);
-  else if (isNumericLiteral(node))
-    return visitNumericLiteral(codegen, node);
-
-  codegen.generateChildren(node);
-}
-
-function visitStatement(codegen: Codegen, node: ts.Statement): void {
-  codegen.generateChildren(node);
-}
-
-function visit(codegen: Codegen, node: ts.Node): void {
-  if (isStatement(node))
-    return visitStatement(codegen, node);
-  else if (isExpression(node))
-    return visitExpression(codegen, node);
-
-  codegen.generateChildren(node);
 }
