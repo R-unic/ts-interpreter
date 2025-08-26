@@ -20,6 +20,8 @@ export const enum InstructionOp {
   GTE,
   NOT,
 
+  STORE,
+
   PRINT,
   HALT
 }

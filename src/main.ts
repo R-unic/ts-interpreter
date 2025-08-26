@@ -10,12 +10,16 @@ import { Bytecode } from "@/bytecode/structs";
 function handleDiagnostics(program: ts.Program): boolean {
   const emitResult = program.emit();
   const allDiagnostics = getPreEmitDiagnostics(program).concat(emitResult.diagnostics)
-  console.log(formatDiagnosticsWithColorAndContext(allDiagnostics, {
+  const diagnostics = formatDiagnosticsWithColorAndContext(allDiagnostics, {
     getCurrentDirectory: () => process.cwd(),
     getCanonicalFileName: fileName => fileName,
     getNewLine: () => "\n",
-  }));
+  });
 
+  if (!diagnostics)
+    return true;
+
+  console.log(diagnostics);
   return !allDiagnostics.some(d => d.category === ts.DiagnosticCategory.Error);
 }
 

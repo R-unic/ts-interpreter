@@ -1,9 +1,16 @@
-import ts, { isBinaryExpression, isExpression, isNumericLiteral, isStatement } from "typescript";
+import ts, {
+  isExpression,
+  isStatement,
+  isBinaryExpression,
+  isNumericLiteral,
+  isVariableDeclaration
+} from "typescript";
 
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
 import { visitNumericLiteral } from "@/ast/expressions/numeric-literal";
 import { visitBinaryExpression } from "@/ast/expressions/binary";
+import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
 import { PRINT } from "@/bytecode/instructions/print";
 import { HALT } from "@/bytecode/instructions/halt";
 import type { Bytecode, Instruction } from "@/bytecode/structs";
@@ -35,13 +42,18 @@ export class Codegen {
     } else if (isExpression(node)) {
       this.visitExpression(node);
       return this.lastInstruction();
+    } else if (isVariableDeclaration(node)) {
+      visitVariableDeclaration(this, node);
+      return this.lastInstruction();
+    } else {
+      // console.warn("Unhandled non-statement and non-expression: " + ts.SyntaxKind[node.kind]);
     }
 
-    this.generateChildren(node);
+    this.visitChildren(node);
     return this.lastInstruction();
   }
 
-  public generateChildren<T extends ts.Node>(node: T): void {
+  public visitChildren<T extends ts.Node>(node: T): void {
     ts.forEachChild(node, node => this.visit(node));
   }
 
@@ -83,11 +95,11 @@ export class Codegen {
     else if (node.kind === ts.SyntaxKind.FalseKeyword)
       return visitFalseLiteral(this, node as never);
 
-    this.generateChildren(node);
+    this.visitChildren(node);
   }
 
   private visitStatement(node: ts.Statement): void {
-    this.generateChildren(node);
+    this.visitChildren(node);
   }
 
   private lastInstruction(): Instruction {

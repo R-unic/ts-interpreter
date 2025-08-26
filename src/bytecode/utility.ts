@@ -14,10 +14,36 @@ export function maybeGetTargetRegister(instruction: Instruction): number | undef
     : undefined;
 }
 
+export function maybeGetSourceRegister(instruction: Instruction): number | undefined {
+  return instruction !== undefined && "source" in instruction && typeof instruction.source === "number"
+    ? instruction.source
+    : undefined;
+}
+
 export function getTargetRegister(instruction: Instruction): number {
   const target = maybeGetTargetRegister(instruction);
   if (target === undefined)
     throw new Error(`Could not find target register field in instruction: ${instruction}`);
 
   return target;
+}
+
+export function getSourceRegister(instruction: Instruction): number {
+  const target = maybeGetSourceRegister(instruction);
+  if (target === undefined)
+    throw new Error(`Could not find source register field in instruction: ${instruction}`);
+
+  return target;
+}
+
+export function getTargetOrSourceRegister(instruction: Instruction): number {
+  const target = maybeGetTargetRegister(instruction);
+  if (target !== undefined)
+    return target;
+
+  const source = maybeGetSourceRegister(instruction);
+  if (source !== undefined)
+    return source;
+
+  throw new Error(`Could not find target or source register field in instruction: ${instruction}`);
 }
