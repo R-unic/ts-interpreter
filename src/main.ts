@@ -1,11 +1,11 @@
-import ts, { createProgram, getPreEmitDiagnostics, formatDiagnosticsWithColorAndContext } from "typescript";
 import { writeFileSync } from "fs";
 import { dirname, relative, resolve } from "path";
+import ts, { createProgram, getPreEmitDiagnostics, formatDiagnosticsWithColorAndContext } from "typescript";
 import assert from "assert";
 
-import { Codegen } from "./codegen";
-import { serializeProgram } from "./bytecode/serialization/program";
-import { Bytecode } from "./bytecode/structs";
+import { Codegen } from "@/codegen";
+import { serializeProgram } from "@/bytecode/serialization/program";
+import { Bytecode } from "@/bytecode/structs";
 
 function handleDiagnostics(program: ts.Program): boolean {
   const emitResult = program.emit();

@@ -1,9 +1,9 @@
 import ts from "typescript";
 
-import { getTargetRegister } from "../../bytecode/utility";
-import { InstructionOp } from "../../bytecode/structs";
-import { ADD } from "../../bytecode/instructions/add";
-import type { Codegen } from "../../codegen";
+import { getTargetRegister } from "@/bytecode/utility";
+import { InstructionOp } from "@/bytecode/structs";
+import { ADD } from "@/bytecode/instructions/add";
+import type { Codegen } from "@/codegen";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.PlusToken]: InstructionOp.ADD,
