@@ -1,3 +1,4 @@
+import { instruction } from "../utility";
 import { InstructionOp, type Instruction } from "../structs";
 import type { VmValue } from "../vm-value";
 
@@ -8,10 +9,7 @@ export interface InstructionLOADV extends Instruction {
 }
 
 export function LOADV(target: number, value: VmValue): InstructionLOADV {
-  return {
-    op: InstructionOp.LOADV,
-    target, value
-  };
+  return instruction(InstructionOp.LOADV, { target, value });
 }
 
 export function isLOADV(instruction: Instruction): instruction is InstructionLOADV {

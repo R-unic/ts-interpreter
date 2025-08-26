@@ -1,3 +1,4 @@
+import { instruction } from "../utility";
 import { InstructionOp, type Instruction } from "../structs";
 
 export interface InstructionPRINT extends Instruction {
@@ -6,10 +7,7 @@ export interface InstructionPRINT extends Instruction {
 }
 
 export function PRINT(target: number): InstructionPRINT {
-  return {
-    op: InstructionOp.PRINT,
-    target
-  };
+  return instruction(InstructionOp.PRINT, { target });
 }
 
 export function isPRINT(instruction: Instruction): instruction is InstructionPRINT {

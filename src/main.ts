@@ -5,7 +5,8 @@ import assert from "assert";
 
 import { Codegen } from "@/codegen";
 import { serializeProgram } from "@/bytecode/serialization/program";
-import { Bytecode } from "@/bytecode/structs";
+import { bytecodeToString } from "@/bytecode/utility";
+import type { Bytecode } from "@/bytecode/structs";
 
 function handleDiagnostics(program: ts.Program): boolean {
   const emitResult = program.emit();
@@ -51,11 +52,12 @@ function generateBytecode(): GenerationResult {
 
 function writeBinary(bytecode: Bytecode): void {
   const buf = serializeProgram(bytecode);
-  console.log("Emitted bytecode:", bytecode);
   console.log("Writing binary:", buf);
   writeFileSync("../../rust/ryde/out.bin", buf); // so we can test it in the vm immediately
 }
 
 const { ok, bytecode } = generateBytecode();
-if (ok)
+if (ok) {
+  console.log("Emitted bytecode:", bytecodeToString(bytecode));
   writeBinary(bytecode);
+}

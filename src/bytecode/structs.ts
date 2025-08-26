@@ -1,5 +1,5 @@
 export type Bytecode = readonly Instruction[];
-export const enum InstructionOp {
+export enum InstructionOp {
   LOADV,
   ADD,
   SUB,

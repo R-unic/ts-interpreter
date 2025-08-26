@@ -1,3 +1,4 @@
+import { instruction } from "../utility";
 import { InstructionOp, type Instruction } from "../structs";
 
 export interface InstructionLOAD extends Instruction {
@@ -7,10 +8,7 @@ export interface InstructionLOAD extends Instruction {
 }
 
 export function LOAD(target: number, name: string): InstructionLOAD {
-  return {
-    op: InstructionOp.LOAD,
-    target, name
-  };
+  return instruction(InstructionOp.LOAD, { target, name });
 }
 
 export function isLOAD(instruction: Instruction): instruction is InstructionLOAD {

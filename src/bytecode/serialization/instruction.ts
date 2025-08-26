@@ -1,10 +1,11 @@
 import { writeVarInt } from "./utility";
-import { isBinaryInstruction, maybeGetTargetRegister } from "../utility";
+import { maybeGetTargetRegister } from "../utility";
 import { serializeVmValue } from "./vm-value";
+import { isBinary } from "../instructions/binary";
 import { isLOADV } from "../instructions/loadv";
 import { isSTORE } from "../instructions/store";
-import type { Instruction } from "../structs";
 import { isLOAD } from "../instructions/load";
+import type { Instruction } from "../structs";
 
 export function serializeInstruction(instruction: Instruction): { result: Buffer, bytesWritten: number; } {
   const buffer = Buffer.alloc(20);
@@ -16,7 +17,7 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
   if (target !== undefined)
     offset += writeVarInt(buffer, offset, target);
 
-  if (isBinaryInstruction(instruction)) {
+  if (isBinary(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.a);
     offset += writeVarInt(buffer, offset, instruction.b);
   } else if (isLOADV(instruction)) {

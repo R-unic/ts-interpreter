@@ -1,11 +1,44 @@
-import type { BinaryInstruction, Instruction } from "./structs";
+import { inspect } from "util";
+import { InstructionOp, type Bytecode, type Instruction } from "./structs";
 
-export function isBinaryInstruction(instruction: Instruction): instruction is BinaryInstruction {
-  return maybeGetTargetRegister(instruction) !== undefined
-    && "a" in instruction
-    && typeof instruction.a === "number"
-    && "b" in instruction
-    && typeof instruction.b === "number";
+export function instruction<T extends {}, Op extends InstructionOp>(op: Op, data: T): Instruction & T & { readonly op: Op; } {
+  return {
+    op, ...data,
+
+    get [Symbol.toStringTag](): string {
+      return InstructionOp[op] + " " + inspect(data, { compact: true, colors: true, customInspect: true });
+    },
+    [inspect.custom](): string {
+      return this.toString();
+    }
+  };
+}
+
+export function bytecodeToString(bytecode: Bytecode): string {
+  const output: string[] = ["["];
+  let indent = 0;
+
+  const expanded = bytecode.length > 1;
+  if (expanded) {
+    output.push("\n");
+    indent++;
+  }
+
+  for (const instruction of bytecode) {
+    output.push("\t".repeat(indent));
+    output.push(instruction.toString());
+    if (!expanded) continue;
+
+    output.push("\n");
+  }
+
+  if (expanded) {
+    output.push("\n");
+    indent--;
+  }
+
+  output.push("]");
+  return output.join("");
 }
 
 export function maybeGetTargetRegister(instruction: Instruction): number | undefined {

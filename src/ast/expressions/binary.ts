@@ -2,7 +2,7 @@ import ts from "typescript";
 
 import { getTargetRegister } from "@/bytecode/utility";
 import { InstructionOp } from "@/bytecode/structs";
-import { ADD, binaryInstruction } from "@/bytecode/instructions/binary";
+import { binaryInstruction } from "@/bytecode/instructions/binary";
 import type { Codegen } from "@/codegen";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
@@ -20,6 +20,11 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
   const leftRegister = getTargetRegister(left);
   const rightRegister = getTargetRegister(right);
   switch (node.operatorToken.kind) {
+    case ts.SyntaxKind.EqualsToken: {
+
+      break;
+    }
+
     default: {
       const op = OPERATOR_OPCODE_MAP[node.operatorToken.kind];
       if (op === undefined)
