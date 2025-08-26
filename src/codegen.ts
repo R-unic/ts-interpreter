@@ -3,7 +3,8 @@ import ts, {
   isStatement,
   isBinaryExpression,
   isNumericLiteral,
-  isVariableDeclaration
+  isVariableDeclaration,
+  isIdentifier
 } from "typescript";
 
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
@@ -14,6 +15,7 @@ import { visitVariableDeclaration } from "@/ast/statements/variable-declaration"
 import { PRINT } from "@/bytecode/instructions/print";
 import { HALT } from "@/bytecode/instructions/halt";
 import type { Bytecode, Instruction } from "@/bytecode/structs";
+import { visitIdentifier } from "./ast/expressions/identifier";
 
 export class Codegen {
   private emitResult: Instruction[] = [];
@@ -26,8 +28,10 @@ export class Codegen {
   ) { }
 
   public generate(sourceFile: ts.SourceFile): Bytecode {
-    this.visit(sourceFile);
-    // this.emitResult.push(PRINT(0)); // temporary
+    for (const statement of sourceFile.statements)
+      this.visit(statement);
+
+    this.emitResult.push(PRINT(this.closestFreeRegister - 1)); // temporary
     this.emitResult.push(HALT);
     const result = this.emitResult;
     this.reset();
@@ -94,6 +98,8 @@ export class Codegen {
       return visitTrueLiteral(this, node as never);
     else if (node.kind === ts.SyntaxKind.FalseKeyword)
       return visitFalseLiteral(this, node as never);
+    else if (isIdentifier(node))
+      return visitIdentifier(this, node);
 
     this.visitChildren(node);
   }

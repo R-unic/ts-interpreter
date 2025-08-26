@@ -4,6 +4,7 @@ import { serializeVmValue } from "./vm-value";
 import { isLOADV } from "../instructions/loadv";
 import { isSTORE } from "../instructions/store";
 import type { Instruction } from "../structs";
+import { isLOAD } from "../instructions/load";
 
 export function serializeInstruction(instruction: Instruction): { result: Buffer, bytesWritten: number; } {
   const buffer = Buffer.alloc(20);
@@ -24,6 +25,9 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     offset += bytesWritten;
   } else if (isSTORE(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.source);
+    offset += writeVarInt(buffer, offset, instruction.name.length);
+    offset += buffer.write(instruction.name, offset);
+  } else if (isLOAD(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.name.length);
     offset += buffer.write(instruction.name, offset);
   }
