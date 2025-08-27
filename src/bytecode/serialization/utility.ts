@@ -14,19 +14,34 @@ export function writeVarInt(
   if (signed)
     value = zigzagEncode(value);
 
-  if (value < 0xFF) { // single byte opt
-    buffer[offset++] = value;
+  // Inline small values (0..=0xF7)
+  if (value <= 0xF7) {
+    buffer[offset] = value;
     return 1;
   }
 
-  // fallback for larger values
-  let start = offset;
-  do {
-    buffer[offset++] = value & 0xFF;
-    value >>>= 8;
-  } while (value !== 0);
+  // 1-byte payload
+  if (value <= 0xFF) {
+    buffer[offset] = 0xF8;
+    buffer[offset + 1] = value;
+    return 2;
+  }
 
-  return offset - start;
+  // 2-byte payload
+  if (value <= 0xFFFF) {
+    buffer[offset] = 0xFB;
+    buffer[offset + 1] = value & 0xFF;
+    buffer[offset + 2] = (value >> 8) & 0xFF;
+    return 3;
+  }
+
+  // 4-byte payload
+  buffer[offset] = 0xFA;
+  buffer[offset + 1] = value & 0xFF;
+  buffer[offset + 2] = (value >> 8) & 0xFF;
+  buffer[offset + 3] = (value >> 16) & 0xFF;
+  buffer[offset + 4] = (value >> 24) & 0xFF;
+  return 5;
 }
 
 /**

@@ -6,7 +6,8 @@ import ts, {
   isVariableDeclaration,
   isIdentifier,
   isWhileStatement,
-  isDoStatement
+  isDoStatement,
+  isIfStatement
 } from "typescript";
 
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
@@ -17,6 +18,7 @@ import { visitIdentifier } from "./ast/expressions/identifier";
 import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
 import { visitWhileStatement } from "./ast/statements/while";
 import { visitDoStatement } from "./ast/statements/do";
+import { visitIfStatement } from "./ast/statements/if";
 import { PRINT } from "@/bytecode/instructions/print";
 import { HALT } from "@/bytecode/instructions/halt";
 import type { Bytecode, Instruction } from "@/bytecode/structs";
@@ -35,7 +37,7 @@ export class Codegen {
     for (const statement of sourceFile.statements)
       this.visit(statement);
 
-    this.emitResult.push(PRINT(this.closestFreeRegister - 1)); // temporary
+    this.emitResult.push(PRINT(Math.max(this.closestFreeRegister - 1, 0))); // temporary
     this.emitResult.push(HALT);
     const result = this.emitResult;
     this.reset();
@@ -97,6 +99,13 @@ export class Codegen {
       this.freeRegister(i);
   }
 
+  public registerScope(callback: () => void): void {
+    const enclosing = this.closestFreeRegister;
+    this.closestFreeRegister = 0;
+    callback();
+    this.closestFreeRegister = enclosing;
+  }
+
   public currentIndex(): number {
     return this.emitResult.length - 1;
   }
@@ -121,6 +130,8 @@ export class Codegen {
       return visitWhileStatement(this, node);
     else if (isDoStatement(node))
       return visitDoStatement(this, node);
+    else if (isIfStatement(node))
+      return visitIfStatement(this, node);
 
     this.visitChildren(node);
   }
