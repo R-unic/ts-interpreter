@@ -5,19 +5,21 @@ import ts, {
   isNumericLiteral,
   isVariableDeclaration,
   isIdentifier,
-  isWhileStatement
+  isWhileStatement,
+  isDoStatement
 } from "typescript";
 
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
 import { visitNumericLiteral } from "@/ast/expressions/numeric-literal";
 import { visitBinaryExpression } from "@/ast/expressions/binary";
+import { visitIdentifier } from "./ast/expressions/identifier";
 import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
+import { visitWhileStatement } from "./ast/statements/while";
+import { visitDoStatement } from "./ast/statements/do";
 import { PRINT } from "@/bytecode/instructions/print";
 import { HALT } from "@/bytecode/instructions/halt";
 import type { Bytecode, Instruction } from "@/bytecode/structs";
-import { visitIdentifier } from "./ast/expressions/identifier";
-import { visitWhileStatement } from "./ast/statements/while";
 
 export class Codegen {
   private emitResult: Instruction[] = [];
@@ -117,6 +119,8 @@ export class Codegen {
   private visitStatement(node: ts.Statement): void {
     if (isWhileStatement(node))
       return visitWhileStatement(this, node);
+    else if (isDoStatement(node))
+      return visitDoStatement(this, node);
 
     this.visitChildren(node);
   }
