@@ -3,6 +3,7 @@ import { inspect } from "util";
 export enum VmValueKind {
   Float,
   Int,
+  String,
   Boolean,
   Null
 }
@@ -10,6 +11,7 @@ export enum VmValueKind {
 interface VmValueTypes {
   [VmValueKind.Float]: number;
   [VmValueKind.Int]: number;
+  [VmValueKind.String]: string;
   [VmValueKind.Boolean]: boolean;
   [VmValueKind.Null]: undefined;
 }
@@ -21,7 +23,7 @@ export interface VmValue<T extends VmValueKind = VmValueKind> {
   [inspect.custom](): string;
 }
 
-export function vmValue(kind: VmValueKind, value: VmValueTypes[VmValueKind]): VmValue<VmValueKind> {
+export function vmValue<T extends VmValueKind>(kind: T, value: VmValueTypes[T]): VmValue<T> {
   return {
     kind, value,
 

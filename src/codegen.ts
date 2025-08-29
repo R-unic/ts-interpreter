@@ -3,6 +3,7 @@ import ts, {
   isStatement,
   isBinaryExpression,
   isNumericLiteral,
+  isStringLiteral,
   isVariableDeclaration,
   isIdentifier,
   isWhileStatement,
@@ -13,6 +14,7 @@ import ts, {
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
 import { visitNumericLiteral } from "@/ast/expressions/numeric-literal";
+import { visitStringLiteral } from "./ast/expressions/string-literal";
 import { visitBinaryExpression } from "@/ast/expressions/binary";
 import { visitIdentifier } from "./ast/expressions/identifier";
 import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
@@ -115,6 +117,8 @@ export class Codegen {
       return visitBinaryExpression(this, node);
     else if (isNumericLiteral(node))
       return visitNumericLiteral(this, node);
+    else if (isStringLiteral(node))
+      return visitStringLiteral(this, node);
     else if (node.kind === ts.SyntaxKind.TrueKeyword)
       return visitTrueLiteral(this, node as never);
     else if (node.kind === ts.SyntaxKind.FalseKeyword)
