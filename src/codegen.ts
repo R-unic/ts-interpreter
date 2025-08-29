@@ -11,9 +11,13 @@ import ts, {
   isIfStatement,
   isFunctionDeclaration,
   isCallExpression,
-  isParameter
+  isParameter,
+  isReturnStatement,
+  isBlock,
+  isVariableStatement
 } from "typescript";
 
+import { canInline } from "@/ast/utility";
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
 import { visitNumericLiteral } from "@/ast/expressions/numeric-literal";
@@ -26,15 +30,18 @@ import { visitDoStatement } from "@/ast/statements/do";
 import { visitIfStatement } from "@/ast/statements/if";
 import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
 import { visitFunctionDeclaration } from "@/ast/statements/function";
-import { visitParameterDeclaration } from "./ast/statements/parameter-declaration";
+import { visitParameterDeclaration } from "@/ast/statements/parameter-declaration";
+import { visitReturnStatement } from "@/ast/statements/return";
+import { visitBlock } from "./ast/statements/block";
 import { PRINT } from "@/bytecode/instructions/print";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
-import type { InstructionCALL } from "@/bytecode/instructions/call";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
+import type { InstructionCALL } from "@/bytecode/instructions/call";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
+  readonly inlined: boolean;
   readonly symbol: ts.Symbol;
 }
 
@@ -59,7 +66,7 @@ export class Codegen {
     for (const statement of sourceFile.statements)
       this.visit(statement);
 
-    // this.emitResult.push(PRINT(Math.max(this.closestFreeRegister - 1, 0))); // temporary
+    this.emitResult.push(PRINT(Math.max(this.closestFreeRegister - 1, 0))); // temporary
     this.emitResult.push(HALT);
     this.emitFunctions();
 
@@ -90,9 +97,11 @@ export class Codegen {
     return this.lastInstruction();
   }
 
-  public visitList<T extends ts.Node>(nodes: T[] | ts.NodeArray<T>): void {
+  public visitList<T extends ts.Node>(nodes: T[] | ts.NodeArray<T>): Instruction {
     for (const node of nodes)
       this.visit(node);
+
+    return this.lastInstruction();
   }
 
   public visitChildren<T extends ts.Node>(node: T): void {
@@ -105,6 +114,10 @@ export class Codegen {
 
   public pushInstruction(instruction: Instruction): void {
     this.emitResult.push(instruction);
+  }
+
+  public popInstruction(): Instruction | undefined {
+    return this.emitResult.pop();
   }
 
   public pushBytecode(bytecode: Bytecode): void {
@@ -163,7 +176,8 @@ export class Codegen {
 
     this.functions.set(symbol, {
       declaration: node,
-      symbol
+      inlined: canInline(node, this),
+      symbol,
     });
   }
 
@@ -194,14 +208,15 @@ export class Codegen {
     const { emitResult } = this;
     let pc = this.emitResult.length;
 
-    for (const [symbol, { declaration }] of this.functions) {
+    for (const [symbol, { inlined, declaration }] of this.functions) {
       if (declaration.body === undefined) continue;
+      if (inlined) continue;
 
       const start = pc;
       this.patchCallAddresses(symbol, start);
-      this.visit(declaration.body);
-      if (this.lastInstruction().op !== InstructionOp.RETURN)
-        emitResult.push(RETURN);
+      const last = this.visitList(declaration.body.statements);
+      if (last.op !== InstructionOp.RETURN)
+        this.emitResult.push(RETURN);
 
       pc += 1 + start - emitResult.length;
     }
@@ -240,7 +255,9 @@ export class Codegen {
   }
 
   private visitStatement(node: ts.Statement): void {
-    if (isWhileStatement(node))
+    if (isBlock(node))
+      return visitBlock(this, node);
+    else if (isWhileStatement(node))
       return visitWhileStatement(this, node);
     else if (isDoStatement(node))
       return visitDoStatement(this, node);
@@ -248,6 +265,14 @@ export class Codegen {
       return visitIfStatement(this, node);
     else if (isFunctionDeclaration(node))
       return visitFunctionDeclaration(this, node);
+    else if (isReturnStatement(node))
+      return visitReturnStatement(this, node);
+    else if (isVariableStatement(node)) {
+      for (const declaration of node.declarationList.declarations)
+        visitVariableDeclaration(this, declaration);
+
+      return;
+    }
 
     this.visitChildren(node);
   }

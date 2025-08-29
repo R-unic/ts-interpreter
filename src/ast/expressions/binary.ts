@@ -18,7 +18,8 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.LessThanEqualsToken]: InstructionOp.LTE,
   [ts.SyntaxKind.GreaterThanToken]: InstructionOp.GT,
   [ts.SyntaxKind.GreaterThanEqualsToken]: InstructionOp.GTE,
-  [ts.SyntaxKind.EqualsEqualsToken]: InstructionOp.EQ,
+  // [ts.SyntaxKind.EqualsEqualsToken]: InstructionOp.EQ,
+  [ts.SyntaxKind.EqualsEqualsEqualsToken]: InstructionOp.EQ,
   [ts.SyntaxKind.ExclamationEqualsEqualsToken]: InstructionOp.NEQ,
 };
 

@@ -2,7 +2,7 @@ import ts, { isDoStatement, isExpression, isForInStatement, isForOfStatement, is
 
 import type { Codegen } from "@/codegen";
 
-/** Returns true for simple functions -- those with no loops or closures */
+/** Returns true for simple functions -- those with no loops, closures, or direct recursion */
 export function canInline(fn: ts.FunctionDeclaration, codegen: Codegen): boolean {
   if (fn.body === undefined)
     return false;
@@ -10,7 +10,7 @@ export function canInline(fn: ts.FunctionDeclaration, codegen: Codegen): boolean
   const bodyStatements = fn.body.statements;
   return !isDirectlyRecursive(fn, codegen)
     && !bodyStatements.some(isLoop) // no loops
-    && !bodyStatements.some(isFunctionLike)
+    && !bodyStatements.some(isFunctionLike) // no closures
 }
 
 /** Returns true if the function calls itself (direct recursion)  */
@@ -22,7 +22,6 @@ function isDirectlyRecursive(
 
   const fnNameNode = (fn as ts.FunctionDeclaration | ts.MethodDeclaration).name;
   if (!fnNameNode) {
-    // Anonymous functions: attempt symbol at the node itself
     const fnSymbol = codegen.getSymbol(fn);
     if (!fnSymbol) return false;
     return containsCallSymbol(fn.body, fnSymbol, codegen);

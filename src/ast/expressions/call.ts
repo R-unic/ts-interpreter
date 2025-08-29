@@ -3,16 +3,17 @@ import type ts from "typescript";
 
 import { CALL } from "@/bytecode/instructions/call";
 import type { Codegen } from "@/codegen";
+import { InstructionOp } from "@/bytecode/structs";
 
 export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): void {
   const symbol = codegen.getSymbol(node.expression);
   const label = codegen.getFunctionLabel(symbol);
   if (label !== undefined) {
-    const instruction = CALL(-1);
     // TODO: blah blah scoping blah blah
 
+    const fn = label.declaration;
     let i = 0;
-    for (const parameter of label.declaration.parameters) {
+    for (const parameter of fn.parameters) {
       const symbol = codegen.getSymbol(parameter.name);
       assert(symbol, "no parameter symbol");
 
@@ -22,7 +23,16 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
       codegen.parameterValues.set(symbol, value);
     }
 
-    codegen.visitList(label.declaration.parameters);
+    codegen.visitList(fn.parameters);
+    if (label.inlined && fn.body) {
+      const last = codegen.visitList(fn.body.statements);
+      if (last.op === InstructionOp.RETURN)
+        codegen.popInstruction(); // no returns for inlined functions
+
+      return;
+    }
+
+    const instruction = CALL(-1);
     codegen.addCallToPatch(symbol!, instruction);
     codegen.pushInstruction(instruction);
   } else {

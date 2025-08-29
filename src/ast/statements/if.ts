@@ -2,8 +2,8 @@ import type ts from "typescript";
 
 import { getTargetRegister } from "@/bytecode/utility";
 import { JZ } from "@/bytecode/instructions/jz";
-import type { Codegen } from "@/codegen";
 import { JMP } from "@/bytecode/instructions/jmp";
+import type { Codegen } from "@/codegen";
 
 export function visitIfStatement(codegen: Codegen, node: ts.IfStatement): void {
   const condition = codegen.visit(node.expression);
@@ -11,16 +11,17 @@ export function visitIfStatement(codegen: Codegen, node: ts.IfStatement): void {
   codegen.freeRegister(conditionRegister);
 
   const jzIndex = codegen.currentIndex();
-  codegen.registerScope(() => codegen.visit(node.thenStatement))
+  codegen.registerScope(() => codegen.visit(node.thenStatement));
 
-  const elseBranchIndex = codegen.currentIndex() + 3;
+  const elseBranchIndex = codegen.currentIndex() + 2 + (node.elseStatement ? 1 : 0);
   codegen.insertInstruction(jzIndex, JZ(conditionRegister, elseBranchIndex));
 
-  const afterIfStatementIndex = codegen.currentIndex()
+  const afterIfStatementIndex = codegen.currentIndex();
   codegen.registerScope(() => {
     if (!node.elseStatement) return;
     codegen.visit(node.elseStatement);
   });
 
-  codegen.insertInstruction(afterIfStatementIndex, JMP(codegen.currentIndex() + 2));
+  if (node.elseStatement)
+    codegen.insertInstruction(afterIfStatementIndex, JMP(codegen.currentIndex() + 2));
 }
