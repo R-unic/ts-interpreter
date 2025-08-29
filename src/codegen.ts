@@ -31,7 +31,7 @@ import { PRINT } from "@/bytecode/instructions/print";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
-import type { Bytecode, Instruction } from "@/bytecode/structs";
+import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -200,7 +200,9 @@ export class Codegen {
       const start = pc;
       this.patchCallAddresses(symbol, start);
       this.visit(declaration.body);
-      emitResult.push(RETURN);
+      if (this.lastInstruction().op !== InstructionOp.RETURN)
+        emitResult.push(RETURN);
+
       pc += 1 + start - emitResult.length;
     }
   }

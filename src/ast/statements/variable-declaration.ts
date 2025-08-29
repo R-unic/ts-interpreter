@@ -1,8 +1,6 @@
 import ts, { isIdentifier } from "typescript";
 
-import { getTargetRegister } from "@/bytecode/utility";
-import { vmValue, VmValueKind } from "@/bytecode/vm-value";
-import { LOADV } from "@/bytecode/instructions/loadv";
+import { getTargetRegister, loadNull } from "@/bytecode/utility";
 import { STORE } from "@/bytecode/instructions/store";
 import type { Codegen } from "@/codegen";
 
@@ -10,16 +8,16 @@ export function visitVariableDeclaration(codegen: Codegen, node: ts.VariableDecl
   if (!isIdentifier(node.name))
     throw new Error("Binding patterns not yet supported");
 
-  let sourceRegister: number;
+  let register: number;
   if (node.initializer) {
     const instruction = codegen.visit(node.initializer);
-    sourceRegister = getTargetRegister(instruction);
+    register = getTargetRegister(instruction);
   } else {
-    sourceRegister = codegen.allocRegister();
-    codegen.pushInstruction(LOADV(sourceRegister, vmValue(VmValueKind.Null, undefined)));
+    register = codegen.allocRegister();
+    codegen.pushInstruction(loadNull(register));
   }
 
-  codegen.pushInstruction(STORE(sourceRegister, node.name.text));
-  codegen.freeRegister(sourceRegister);
+  codegen.pushInstruction(STORE(register, node.name.text));
+  codegen.freeRegister(register);
   // TODO: more guidelines for freeing
 }

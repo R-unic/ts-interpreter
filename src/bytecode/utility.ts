@@ -1,5 +1,12 @@
 import { inspect, type InspectOptions } from "util";
+
+import { vmValue, VmValueKind } from "./vm-value";
+import { LOADV } from "./instructions/loadv";
 import { InstructionOp, type Bytecode, type Instruction } from "./structs";
+
+export function loadNull(register: number): Instruction {
+  return LOADV(register, vmValue(VmValueKind.Null, undefined));
+}
 
 export const INSPECT_OPTIONS: InspectOptions = {
   compact: true,
