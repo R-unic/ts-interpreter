@@ -5,10 +5,11 @@ import { isBinary } from "../instructions/binary";
 import { isLOADV } from "../instructions/loadv";
 import { isSTORE } from "../instructions/store";
 import { isLOAD } from "../instructions/load";
-import type { Instruction } from "../structs";
 import { isJMP } from "../instructions/jmp";
 import { isJZ } from "../instructions/jz";
 import { isJNZ } from "../instructions/jnz";
+import { isCALL } from "../instructions/call";
+import type { Instruction } from "../structs";
 
 export function serializeInstruction(instruction: Instruction): { result: Buffer; bytesWritten: number; } {
   const buffer = Buffer.alloc(20);
@@ -31,7 +32,7 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
   } else if (isSTORE(instruction) || isLOAD(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.name.length);
     offset += buffer.write(instruction.name, offset);
-  } else if (isJMP(instruction) || isJZ(instruction) || isJNZ(instruction)) {
+  } else if (isJMP(instruction) || isJZ(instruction) || isJNZ(instruction) || isCALL(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.address);
   }
 

@@ -8,39 +8,71 @@ import ts, {
   isIdentifier,
   isWhileStatement,
   isDoStatement,
-  isIfStatement
+  isIfStatement,
+  isFunctionDeclaration,
+  isCallExpression
 } from "typescript";
 
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
 import { visitNumericLiteral } from "@/ast/expressions/numeric-literal";
-import { visitStringLiteral } from "./ast/expressions/string-literal";
+import { visitStringLiteral } from "@/ast/expressions/string-literal";
 import { visitBinaryExpression } from "@/ast/expressions/binary";
-import { visitIdentifier } from "./ast/expressions/identifier";
+import { visitIdentifier } from "@/ast/expressions/identifier";
+import { visitCallExpression } from "@/ast/expressions/call";
+import { visitWhileStatement } from "@/ast/statements/while";
+import { visitDoStatement } from "@/ast/statements/do";
+import { visitIfStatement } from "@/ast/statements/if";
 import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
-import { visitWhileStatement } from "./ast/statements/while";
-import { visitDoStatement } from "./ast/statements/do";
-import { visitIfStatement } from "./ast/statements/if";
+import { visitFunctionDeclaration } from "@/ast/statements/function";
 import { PRINT } from "@/bytecode/instructions/print";
+import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
+import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { Bytecode, Instruction } from "@/bytecode/structs";
 
+interface FunctionLabel {
+  readonly declaration: ts.FunctionDeclaration;
+  readonly symbol: ts.Symbol;
+}
+
 export class Codegen {
+  public callsToPatch = new Map<ts.Symbol, Writable<InstructionCALL>[]>;
+
+  private readonly checker: ts.TypeChecker;
   private emitResult: Instruction[] = [];
+  private functions = new Map<ts.Symbol, FunctionLabel>;
   private allocatedRegisters = new Set<number>;
   private closestFreeRegister = 0;
 
   public constructor(
-    public readonly program: ts.Program,
+    program: ts.Program,
     public readonly maxRegisters: number
-  ) { }
+  ) {
+    this.checker = program.getTypeChecker();
+  }
 
   public generate(sourceFile: ts.SourceFile): Bytecode {
     for (const statement of sourceFile.statements)
       this.visit(statement);
 
-    this.emitResult.push(PRINT(Math.max(this.closestFreeRegister - 1, 0))); // temporary
+    // this.emitResult.push(PRINT(Math.max(this.closestFreeRegister - 1, 0))); // temporary
     this.emitResult.push(HALT);
+    let pc = this.emitResult.length;
+    for (const [symbol, label] of this.functions) {
+      if (label.declaration.body === undefined) continue;
+
+      const start = pc;
+      const respectiveCalls = this.callsToPatch.get(symbol) ?? [];
+      for (const respectiveCall of respectiveCalls) {
+        respectiveCall.address = start;
+      }
+
+      this.visit(label.declaration.body);
+      this.emitResult.push(RETURN);
+      pc += 1 + start - this.emitResult.length;
+    }
+
     const result = this.emitResult;
     this.reset();
 
@@ -108,12 +140,55 @@ export class Codegen {
     this.closestFreeRegister = enclosing;
   }
 
+  public addCallToPatch(symbol: ts.Symbol, instruction: InstructionCALL): void {
+    const callsToPatch = this.callsToPatch.get(symbol) ?? [];
+    callsToPatch.push(instruction);
+    this.callsToPatch.set(symbol, callsToPatch);
+  }
+
+  public getFunctionLabel(symbol: ts.Symbol | undefined): FunctionLabel | undefined {
+    if (symbol === undefined) return;
+    return this.functions.get(symbol);
+  }
+
+  public createFunctionLabel(node: ts.FunctionDeclaration): void {
+    let symbol: ts.Symbol | undefined;
+    if (node.name)
+      symbol = this.checker.getSymbolAtLocation(node.name);
+    else {
+      const type = this.checker.getTypeAtLocation(node);
+      symbol = type.getSymbol();
+    }
+
+    if (symbol === undefined)
+      throw new Error(`Could not find symbol for function:\n${node.getText()}\n`);
+
+    this.functions.set(symbol, {
+      declaration: node,
+      symbol
+    });
+  }
+
+  public getSymbol(node: ts.Node): ts.Symbol | undefined {
+    return this.checker.getSymbolAtLocation(node);
+  }
+
+  public getUnaliasedSymbol(node: ts.Node): ts.Symbol | undefined {
+    let symbol = this.getSymbol(node);
+    if (symbol && symbol.flags & ts.SymbolFlags.Alias)
+      symbol = this.checker.getAliasedSymbol(symbol);
+
+    return symbol;
+  }
+
   public currentIndex(): number {
     return this.emitResult.length - 1;
   }
 
   private visitExpression(node: ts.Expression): void {
-    if (isBinaryExpression(node))
+    if (isCallExpression(node))
+      return visitCallExpression(this, node);
+    else if (isBinaryExpression(node))
       return visitBinaryExpression(this, node);
     else if (isNumericLiteral(node))
       return visitNumericLiteral(this, node);
@@ -136,6 +211,8 @@ export class Codegen {
       return visitDoStatement(this, node);
     else if (isIfStatement(node))
       return visitIfStatement(this, node);
+    else if (isFunctionDeclaration(node))
+      return visitFunctionDeclaration(this, node);
 
     this.visitChildren(node);
   }
@@ -146,6 +223,8 @@ export class Codegen {
 
   private reset(): void {
     this.emitResult = [];
+    this.functions = new Map;
+    this.callsToPatch = new Map;
     this.allocatedRegisters = new Set;
     this.closestFreeRegister = 0;
   }

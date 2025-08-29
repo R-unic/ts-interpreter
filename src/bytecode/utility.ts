@@ -1,12 +1,27 @@
-import { inspect } from "util";
+import { inspect, type InspectOptions } from "util";
 import { InstructionOp, type Bytecode, type Instruction } from "./structs";
+
+export const INSPECT_OPTIONS: InspectOptions = {
+  compact: true,
+  colors: true,
+  customInspect: true,
+  showHidden: false,
+  depth: null
+};
 
 export function instruction<T extends {}, Op extends InstructionOp>(op: Op, data: T): Instruction & T & { readonly op: Op; } {
   return {
     op, ...data,
 
     get [Symbol.toStringTag](): string {
-      return InstructionOp[op] + " " + inspect(data, { compact: true, colors: true, customInspect: true });
+      const copy: typeof this = {} as never;
+      for (const key of Object.keys(this) as (keyof typeof this)[]) {
+        if (key === "op") continue;
+        copy[key] = this[key];
+      }
+
+      const dataString = inspect(copy, INSPECT_OPTIONS);
+      return InstructionOp[op] + (dataString === "{}" ? "" : " " + dataString);
     },
     [inspect.custom](): string {
       return this.toString();

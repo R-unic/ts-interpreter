@@ -1,4 +1,5 @@
 import { inspect } from "util";
+import { INSPECT_OPTIONS } from "./utility";
 
 export enum VmValueKind {
   Float,
@@ -28,7 +29,7 @@ export function vmValue<T extends VmValueKind>(kind: T, value: VmValueTypes[T]):
     kind, value,
 
     get [Symbol.toStringTag](): string {
-      return VmValueKind[kind] + "(" + inspect(value === undefined ? null : value, { compact: true, colors: true, customInspect: true }) + ")";
+      return VmValueKind[kind] + "(" + inspect(value === undefined ? null : value, INSPECT_OPTIONS) + ")";
     },
     [inspect.custom](): string {
       return this.toString();

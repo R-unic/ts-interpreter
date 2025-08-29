@@ -23,8 +23,11 @@ export enum InstructionOp {
   JMP,
   JZ,
   JNZ,
+
   STORE,
   LOAD,
+  CALL,
+  RETURN,
 
   PRINT,
   HALT
