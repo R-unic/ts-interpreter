@@ -1,4 +1,67 @@
-import ts, { isExpression } from "typescript";
+import ts, { isDoStatement, isExpression, isForInStatement, isForOfStatement, isForStatement, isFunctionLike, isWhileStatement } from "typescript";
+
+import type { Codegen } from "@/codegen";
+
+/** Returns true for simple functions -- those with no loops or closures */
+export function canInline(fn: ts.FunctionDeclaration, codegen: Codegen): boolean {
+  if (fn.body === undefined)
+    return false;
+
+  const bodyStatements = fn.body.statements;
+  return !isDirectlyRecursive(fn, codegen)
+    && !bodyStatements.some(isLoop) // no loops
+    && !bodyStatements.some(isFunctionLike)
+}
+
+/** Returns true if the function calls itself (direct recursion)  */
+function isDirectlyRecursive(
+  fn: ts.FunctionLikeDeclaration,
+  codegen: Codegen
+): boolean {
+  if (!fn.body) return false;
+
+  const fnNameNode = (fn as ts.FunctionDeclaration | ts.MethodDeclaration).name;
+  if (!fnNameNode) {
+    // Anonymous functions: attempt symbol at the node itself
+    const fnSymbol = codegen.getSymbol(fn);
+    if (!fnSymbol) return false;
+    return containsCallSymbol(fn.body, fnSymbol, codegen);
+  }
+
+  const fnSymbol = codegen.getSymbol(fnNameNode);
+  if (!fnSymbol) return false;
+
+  return containsCallSymbol(fn.body, fnSymbol, codegen);
+}
+
+function containsCallSymbol(
+  node: ts.Node,
+  fnSymbol: ts.Symbol,
+  codegen: Codegen
+): boolean {
+  let recursive = false;
+
+  function visit(n: ts.Node): void {
+    if (ts.isCallExpression(n) || ts.isNewExpression(n)) {
+      const calledSymbol = codegen.getSymbol(n.expression);
+      if (calledSymbol === fnSymbol) {
+        recursive = true;
+      }
+    }
+    ts.forEachChild(n, visit);
+  }
+
+  visit(node);
+  return recursive;
+}
+
+export function isLoop(node: ts.Statement): boolean {
+  return isWhileStatement(node)
+    || isDoStatement(node)
+    || isForStatement(node)
+    || isForInStatement(node)
+    || isForOfStatement(node);
+}
 
 export function isStandaloneExpression(node: ts.Node): boolean {
   if (!node || !isExpression(node))

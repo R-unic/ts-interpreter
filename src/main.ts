@@ -45,7 +45,7 @@ function generateBytecode(): GenerationResult {
   const file = program.getSourceFile(filePath);
   assert(file, `Could not find source file ${filePath}`);
 
-  const bytecode = codegen.generate(file);
+  const bytecode = codegen.emit(file);
   const ok = handleDiagnostics(program);
   return ok ? { ok, bytecode } : { ok };
 }

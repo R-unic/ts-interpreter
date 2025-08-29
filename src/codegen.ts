@@ -10,7 +10,8 @@ import ts, {
   isDoStatement,
   isIfStatement,
   isFunctionDeclaration,
-  isCallExpression
+  isCallExpression,
+  isParameter
 } from "typescript";
 
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
@@ -25,6 +26,7 @@ import { visitDoStatement } from "@/ast/statements/do";
 import { visitIfStatement } from "@/ast/statements/if";
 import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
 import { visitFunctionDeclaration } from "@/ast/statements/function";
+import { visitParameterDeclaration } from "./ast/statements/parameter-declaration";
 import { PRINT } from "@/bytecode/instructions/print";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
@@ -38,6 +40,7 @@ interface FunctionLabel {
 
 export class Codegen {
   public callsToPatch = new Map<ts.Symbol, Writable<InstructionCALL>[]>;
+  public parameterValues = new Map<ts.Symbol, ts.Expression>;
 
   private readonly checker: ts.TypeChecker;
   private emitResult: Instruction[] = [];
@@ -52,26 +55,13 @@ export class Codegen {
     this.checker = program.getTypeChecker();
   }
 
-  public generate(sourceFile: ts.SourceFile): Bytecode {
+  public emit(sourceFile: ts.SourceFile): Bytecode {
     for (const statement of sourceFile.statements)
       this.visit(statement);
 
     // this.emitResult.push(PRINT(Math.max(this.closestFreeRegister - 1, 0))); // temporary
     this.emitResult.push(HALT);
-    let pc = this.emitResult.length;
-    for (const [symbol, label] of this.functions) {
-      if (label.declaration.body === undefined) continue;
-
-      const start = pc;
-      const respectiveCalls = this.callsToPatch.get(symbol) ?? [];
-      for (const respectiveCall of respectiveCalls) {
-        respectiveCall.address = start;
-      }
-
-      this.visit(label.declaration.body);
-      this.emitResult.push(RETURN);
-      pc += 1 + start - this.emitResult.length;
-    }
+    this.emitFunctions();
 
     const result = this.emitResult;
     this.reset();
@@ -89,12 +79,20 @@ export class Codegen {
     } else if (isVariableDeclaration(node)) {
       visitVariableDeclaration(this, node);
       return this.lastInstruction();
+    } else if (isParameter(node)) {
+      visitParameterDeclaration(this, node);
+      return this.lastInstruction();
     } else {
       // console.warn("Unhandled non-statement and non-expression: " + ts.SyntaxKind[node.kind]);
     }
 
     this.visitChildren(node);
     return this.lastInstruction();
+  }
+
+  public visitList<T extends ts.Node>(nodes: T[] | ts.NodeArray<T>): void {
+    for (const node of nodes)
+      this.visit(node);
   }
 
   public visitChildren<T extends ts.Node>(node: T): void {
@@ -183,6 +181,41 @@ export class Codegen {
 
   public currentIndex(): number {
     return this.emitResult.length - 1;
+  }
+
+  /**
+   * Emits the bytecode for all functions in the current program.
+   * For each function, it:
+   * - Patches the addresses of all CALL instructions pointing to the current function.
+   * - Emits the function body at the end of the program.
+   * - Updates the program counter to point to the new end of the program.
+   */
+  private emitFunctions(): void {
+    const { emitResult } = this;
+    let pc = this.emitResult.length;
+
+    for (const [symbol, { declaration }] of this.functions) {
+      if (declaration.body === undefined) continue;
+
+      const start = pc;
+      this.patchCallAddresses(symbol, start);
+      this.visit(declaration.body);
+      emitResult.push(RETURN);
+      pc += 1 + start - emitResult.length;
+    }
+  }
+
+  /**
+   * Patches the addresses of all CALL instructions referring to the given function symbol.
+   * This is done after all functions have been emitted, because the addresses of the functions are not
+   * yet known when processing the CALL instructions.
+   * @param symbol The symbol to look for.
+   * @param address The address to patch the calls with.
+   */
+  private patchCallAddresses(symbol: ts.Symbol, address: number): void {
+    const respectiveCalls = this.callsToPatch.get(symbol) ?? [];
+    for (const respectiveCall of respectiveCalls)
+      respectiveCall.address = address;
   }
 
   private visitExpression(node: ts.Expression): void {
