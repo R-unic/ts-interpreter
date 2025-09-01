@@ -1,6 +1,35 @@
-import ts, { isDoStatement, isExpression, isForInStatement, isForOfStatement, isForStatement, isFunctionLike, isWhileStatement } from "typescript";
+import ts, { isDoStatement, isElementAccessExpression, isExpression, isForInStatement, isForOfStatement, isForStatement, isFunctionLike, isIdentifier, isPropertyAccessExpression, isStringLiteral, isVariableDeclaration, isWhileStatement } from "typescript";
 
 import type { Codegen } from "@/codegen";
+
+export function isTruthyConstant(expression: ts.Expression, codegen: Codegen): boolean {
+  return Boolean(codegen.getConstantValue(expression));
+}
+
+/** Gets the resolved type of any given node  */
+export function getTypeOfNode(node: ts.Node, checker: ts.TypeChecker): ts.Type | undefined {
+  if (
+    isExpression(node)
+    || isIdentifier(node)
+    || isPropertyAccessExpression(node)
+    || isElementAccessExpression(node)
+  ) {
+    return checker.getTypeAtLocation(node);
+  }
+
+  if (isVariableDeclaration(node)) {
+    if (node.initializer)
+      return getTypeOfNode(node.initializer, checker);
+
+    return checker.getTypeAtLocation(node.name);
+  }
+
+  try {
+    return checker.getTypeAtLocation(node);
+  } catch {
+    return undefined;
+  }
+}
 
 /** Returns true for simple functions -- those with no loops, closures, or direct recursion */
 export function canInline(fn: ts.FunctionDeclaration, codegen: Codegen): boolean {

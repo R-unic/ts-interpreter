@@ -11,5 +11,6 @@ export function visitDoStatement(codegen: Codegen, node: ts.DoStatement): void {
   const condition = codegen.visit(node.expression);
   const conditionRegister = getTargetRegister(condition);
   codegen.freeRegister(conditionRegister);
-  codegen.pushInstruction(JNZ(conditionRegister, start + 1));
+  codegen.pushInstruction(JNZ(conditionRegister, start));
+  codegen.backpatchLoopConstructs(start, codegen.currentIndex());
 }

@@ -2,7 +2,7 @@ import type ts from "typescript";
 
 import { getTargetRegister } from "@/bytecode/utility";
 import { JZ } from "@/bytecode/instructions/jz";
-import { JMP } from "@/bytecode/instructions/jmp";
+import { InstructionJMP, JMP } from "@/bytecode/instructions/jmp";
 import type { Codegen } from "@/codegen";
 
 export function visitIfStatement(codegen: Codegen, node: ts.IfStatement): void {
@@ -10,18 +10,25 @@ export function visitIfStatement(codegen: Codegen, node: ts.IfStatement): void {
   const conditionRegister = getTargetRegister(condition);
   codegen.freeRegister(conditionRegister);
 
-  const jzIndex = codegen.currentIndex();
+  const jz = codegen.pushInstruction(JZ(conditionRegister, -1));
   codegen.registerScope(() => codegen.visit(node.thenStatement));
 
-  const elseBranchIndex = codegen.currentIndex() + 2 + (node.elseStatement ? 1 : 0);
-  codegen.insertInstruction(jzIndex, JZ(conditionRegister, elseBranchIndex));
+  let jmp: Writable<InstructionJMP> | undefined;
+  const hasElseStatement = node.elseStatement !== undefined;
+  if (hasElseStatement)
+    jmp = codegen.pushInstruction(JMP(-1));
 
-  const afterIfStatementIndex = codegen.currentIndex();
+  const elseBranchIndex = codegen.currentIndex();
   codegen.registerScope(() => {
-    if (!node.elseStatement) return;
+    if (!hasElseStatement) return;
     codegen.visit(node.elseStatement);
   });
 
-  if (node.elseStatement)
-    codegen.insertInstruction(afterIfStatementIndex, JMP(codegen.currentIndex() + 2));
+  const end = codegen.currentIndex();
+  const jzIndex = hasElseStatement ? elseBranchIndex : end;
+
+  // backpatch addresses
+  jz.address = jzIndex;
+  if (jmp)
+    jmp.address = end;
 }
