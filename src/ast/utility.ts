@@ -1,6 +1,5 @@
 import ts, { isDoStatement, isElementAccessExpression, isExpression, isForInStatement, isForOfStatement, isForStatement, isFunctionLike, isIdentifier, isPropertyAccessExpression, isStringLiteral, isVariableDeclaration, isWhileStatement } from "typescript";
 
-import { getTargetRegister } from "@/bytecode/utility";
 import { JMP } from "@/bytecode/instructions/jmp";
 import { type InstructionJZ, JZ } from "@/bytecode/instructions/jz";
 import type { Codegen } from "@/codegen";
@@ -11,7 +10,7 @@ export function whileLoop(codegen: Codegen, condition: ts.Expression, body: ts.S
   let jz: Writable<InstructionJZ> | undefined;
   if (!infiniteLoop) {
     const instruction = codegen.visit(condition);
-    const conditionRegister = getTargetRegister(instruction);
+    const conditionRegister = codegen.getTargetRegister(instruction);
     codegen.freeRegister(conditionRegister);
     jz = codegen.pushInstruction(JZ(conditionRegister, -1));
   }

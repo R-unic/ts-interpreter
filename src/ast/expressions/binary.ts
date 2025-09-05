@@ -1,6 +1,5 @@
 import ts, { isIdentifier } from "typescript";
 
-import { getTargetRegister } from "@/bytecode/utility";
 import { InstructionOp } from "@/bytecode/structs";
 import { binaryInstruction } from "@/bytecode/instructions/binary";
 import { STORE } from "@/bytecode/instructions/store";
@@ -30,7 +29,7 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
       assert(isIdentifier(node.left), "Binding patterns not yet supported");
 
       const right = codegen.visit(node.right);
-      rightRegister = getTargetRegister(right);
+      rightRegister = codegen.getTargetRegister(right);
       codegen.pushInstruction(STORE(rightRegister, node.left.text));
       break;
     }
@@ -42,9 +41,9 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
 
       // replace the left register value with the result
       const left = codegen.visit(node.left);
-      const leftRegister = getTargetRegister(left);
+      const leftRegister = codegen.getTargetRegister(left);
       const right = codegen.visit(node.right);
-      rightRegister = getTargetRegister(right);
+      rightRegister = codegen.getTargetRegister(right);
       codegen.pushInstruction(binaryInstruction(op, leftRegister, leftRegister, rightRegister));
       break;
     }

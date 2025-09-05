@@ -1,3 +1,4 @@
+// for recursive fibonacci to work we need call stack scopes
 function fibonacci(n: number): number {
   if (n <= 0) return 0;
   if (n === 1) return 1;
@@ -13,4 +14,5 @@ function fibonacci(n: number): number {
   return b;
 }
 
-fibonacci(7) // 13
+const result = fibonacci(25);
+console.log(result); // 75025

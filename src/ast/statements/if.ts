@@ -1,13 +1,12 @@
 import type ts from "typescript";
 
-import { getTargetRegister } from "@/bytecode/utility";
 import { JZ } from "@/bytecode/instructions/jz";
 import { InstructionJMP, JMP } from "@/bytecode/instructions/jmp";
 import type { Codegen } from "@/codegen";
 
 export function visitIfStatement(codegen: Codegen, node: ts.IfStatement): void {
   const condition = codegen.visit(node.expression);
-  const conditionRegister = getTargetRegister(condition);
+  const conditionRegister = codegen.getTargetRegister(condition);
   codegen.freeRegister(conditionRegister);
 
   const jz = codegen.pushInstruction(JZ(conditionRegister, -1));

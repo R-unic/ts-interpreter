@@ -1,7 +1,7 @@
 import ts, { isIdentifier } from "typescript";
 import assert from "assert";
 
-import { getTargetRegister, loadNull } from "@/bytecode/utility";
+import { loadNull } from "@/bytecode/utility";
 import { STORE } from "@/bytecode/instructions/store";
 import type { Codegen } from "@/codegen";
 
@@ -16,7 +16,7 @@ export function visitParameterDeclaration(codegen: Codegen, node: ts.ParameterDe
   let register: number;
   if (value !== undefined) {
     const instruction = codegen.visit(value);
-    register = getTargetRegister(instruction);
+    register = codegen.getTargetRegister(instruction);
   } else {
     register = codegen.allocRegister();
     codegen.pushInstruction(loadNull(register));

@@ -30,6 +30,7 @@ import { visitIdentifier } from "@/ast/expressions/identifier";
 import { visitCallExpression } from "@/ast/expressions/call";
 import { visitWhileStatement } from "@/ast/statements/while";
 import { visitDoStatement } from "@/ast/statements/do";
+import { visitForStatement } from "./ast/statements/for";
 import { visitIfStatement } from "@/ast/statements/if";
 import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
 import { visitFunctionDeclaration } from "@/ast/statements/function";
@@ -38,13 +39,12 @@ import { visitReturnStatement } from "@/ast/statements/return";
 import { visitBreakStatement } from "@/ast/statements/break";
 import { visitContinueStatement } from "@/ast/statements/continue";
 import { visitBlock } from "@/ast/statements/block";
-import { PRINT } from "@/bytecode/instructions/print";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
-import { visitForStatement } from "./ast/statements/for";
+import { getTargetRegister } from "./bytecode/utility";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -83,7 +83,6 @@ export class Codegen {
     for (const statement of sourceFile.statements)
       this.visit(statement);
 
-    this.emitResult.push(PRINT(Math.max(this.closestFreeRegister - 1, 0))); // temporary
     this.emitResult.push(HALT);
     this.emitFunctions();
 
@@ -156,6 +155,23 @@ export class Codegen {
   public freeRegisterRange(start: number, end: number): void {
     for (let i = start; i <= end; i++)
       this.freeRegister(i);
+  }
+
+  /**
+   * Returns the target register for the given instruction, or the last allocated register
+   * if no target register could be found.
+   * @param instruction - The instruction to get the target register from
+   */
+  public getTargetRegister(instruction: Instruction): number {
+    try {
+      return getTargetRegister(instruction);
+    } catch {
+      return this.lastAllocatedRegister();
+    }
+  }
+
+  public lastAllocatedRegister(): number {
+    return Math.max(this.closestFreeRegister - 1, 0);
   }
 
   public registerScope(callback: () => void): void {
@@ -275,8 +291,8 @@ export class Codegen {
       if (inlined) continue;
 
       const start = pc;
-      this.backpatchCallAddresses(symbol, start);
       const last = this.visitList(declaration.body.statements);
+      this.backpatchCallAddresses(symbol, start);
       if (last.op !== InstructionOp.RETURN)
         this.emitResult.push(RETURN);
 

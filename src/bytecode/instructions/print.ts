@@ -3,11 +3,11 @@ import { InstructionOp, type Instruction } from "../structs";
 
 export interface InstructionPRINT extends Instruction {
   readonly op: InstructionOp.PRINT;
-  readonly target: number;
+  readonly source: number;
 }
 
-export function PRINT(target: number): InstructionPRINT {
-  return instruction(InstructionOp.PRINT, { target });
+export function PRINT(source: number): InstructionPRINT {
+  return instruction(InstructionOp.PRINT, { source });
 }
 
 export function isPRINT(instruction: Instruction): instruction is InstructionPRINT {

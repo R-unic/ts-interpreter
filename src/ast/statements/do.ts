@@ -1,6 +1,5 @@
 import type ts from "typescript";
 
-import { getTargetRegister } from "@/bytecode/utility";
 import { JNZ } from "@/bytecode/instructions/jnz";
 import type { Codegen } from "@/codegen";
 
@@ -9,7 +8,7 @@ export function visitDoStatement(codegen: Codegen, node: ts.DoStatement): void {
   codegen.visit(node.statement);
 
   const condition = codegen.visit(node.expression);
-  const conditionRegister = getTargetRegister(condition);
+  const conditionRegister = codegen.getTargetRegister(condition);
   codegen.freeRegister(conditionRegister);
   codegen.pushInstruction(JNZ(conditionRegister, start));
   codegen.backpatchLoopConstructs(start, codegen.currentIndex());

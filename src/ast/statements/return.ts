@@ -1,6 +1,6 @@
 import type ts from "typescript";
 
-import { getTargetRegister, loadNull } from "@/bytecode/utility";
+import { loadNull } from "@/bytecode/utility";
 import { RETURN } from "@/bytecode/instructions/return";
 import type { Codegen } from "@/codegen";
 
@@ -8,7 +8,7 @@ export function visitReturnStatement(codegen: Codegen, node: ts.ReturnStatement)
   let register: number;
   if (node.expression) {
     const instruction = codegen.visit(node.expression);
-    register = getTargetRegister(instruction);
+    register = codegen.getTargetRegister(instruction);
   } else {
     register = codegen.allocRegister();
     codegen.pushInstruction(loadNull(register));
