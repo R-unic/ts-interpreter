@@ -17,15 +17,21 @@ import ts, {
   isVariableStatement,
   isBreakStatement,
   isContinueStatement,
-  isForStatement
+  isForStatement,
+  isPropertyAccessExpression,
+  isElementAccessExpression,
+  isEnumDeclaration
 } from "typescript";
 
 import { canInline, getTypeOfNode } from "@/ast/utility";
+import { getTargetRegister } from "@/bytecode/utility";
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
 import { visitNumericLiteral } from "@/ast/expressions/numeric-literal";
 import { visitStringLiteral } from "@/ast/expressions/string-literal";
 import { visitBinaryExpression } from "@/ast/expressions/binary";
+import { visitPropertyAccessExpression } from "./ast/expressions/property-access";
+import { visitElementAccessExpression } from "./ast/expressions/element-access";
 import { visitIdentifier } from "@/ast/expressions/identifier";
 import { visitCallExpression } from "@/ast/expressions/call";
 import { visitWhileStatement } from "@/ast/statements/while";
@@ -35,6 +41,7 @@ import { visitIfStatement } from "@/ast/statements/if";
 import { visitVariableDeclaration } from "@/ast/statements/variable-declaration";
 import { visitFunctionDeclaration } from "@/ast/statements/function";
 import { visitParameterDeclaration } from "@/ast/statements/parameter-declaration";
+import { visitEnumDeclaration } from "./ast/statements/enum-declaration";
 import { visitReturnStatement } from "@/ast/statements/return";
 import { visitBreakStatement } from "@/ast/statements/break";
 import { visitContinueStatement } from "@/ast/statements/continue";
@@ -44,7 +51,6 @@ import { HALT } from "@/bytecode/instructions/halt";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
-import { getTargetRegister } from "./bytecode/utility";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -328,6 +334,10 @@ export class Codegen {
       return visitFalseLiteral(this, node as never);
     else if (isIdentifier(node))
       return visitIdentifier(this, node);
+    else if (isPropertyAccessExpression(node))
+      return visitPropertyAccessExpression(this, node);
+    else if (isElementAccessExpression(node))
+      return visitElementAccessExpression(this, node);
 
     this.visitChildren(node);
   }
@@ -351,6 +361,8 @@ export class Codegen {
       return visitFunctionDeclaration(this, node);
     else if (isReturnStatement(node))
       return visitReturnStatement(this, node);
+    else if (isEnumDeclaration(node))
+      return visitEnumDeclaration(this, node);
     else if (isVariableStatement(node)) {
       for (const declaration of node.declarationList.declarations)
         visitVariableDeclaration(this, declaration);

@@ -10,6 +10,6 @@ export function visitStringLiteral(codegen: Codegen, node: ts.StringLiteral): vo
   const value = vmValue(VmValueKind.String, node.text);
 
   codegen.pushInstruction(LOADV(register, value));
-  if (isStandaloneExpression(node.parent))
-    codegen.freeRegister(register);
+  // if (isStandaloneExpression(node.parent))
+  //   codegen.freeRegister(register);
 }

@@ -38,7 +38,11 @@ function generateBytecode(): GenerationResult {
 
   const program = createProgram({
     rootNames: [filePath],
-    options: { strict: true, noEmit: true }
+    options: {
+      strict: true,
+      noEmit: true,
+      preserveConstEnums: true
+    }
   });
 
   const codegen = new Codegen(program, 8);

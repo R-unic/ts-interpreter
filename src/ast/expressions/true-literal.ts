@@ -10,6 +10,6 @@ export function visitTrueLiteral(codegen: Codegen, node: ts.TrueLiteral): void {
   const value = vmValue(VmValueKind.Boolean, true);
 
   codegen.pushInstruction(LOADV(register, value));
-  if (isStandaloneExpression(node.parent))
-    codegen.freeRegister(register);
+  // if (isStandaloneExpression(node.parent))
+  //   codegen.freeRegister(register);
 }

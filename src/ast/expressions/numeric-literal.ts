@@ -1,6 +1,5 @@
 import type ts from "typescript";
 
-import { isStandaloneExpression } from "../utility";
 import { vmValue, VmValueKind } from "@/bytecode/vm-value";
 import { LOADV } from "@/bytecode/instructions/loadv";
 import type { Codegen } from "@/codegen";
@@ -12,6 +11,6 @@ export function visitNumericLiteral(codegen: Codegen, node: ts.NumericLiteral): 
   const value = vmValue(kind, parseFloat(text));
 
   codegen.pushInstruction(LOADV(register, value));
-  if (isStandaloneExpression(node.parent))
-    codegen.freeRegister(register);
+  // if (isStandaloneExpression(node.parent))
+  //   codegen.freeRegister(register);
 }
