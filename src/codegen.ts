@@ -16,7 +16,8 @@ import ts, {
   isBlock,
   isVariableStatement,
   isBreakStatement,
-  isContinueStatement
+  isContinueStatement,
+  isForStatement
 } from "typescript";
 
 import { canInline, getTypeOfNode } from "@/ast/utility";
@@ -43,6 +44,7 @@ import { HALT } from "@/bytecode/instructions/halt";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
+import { visitForStatement } from "./ast/statements/for";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -91,7 +93,7 @@ export class Codegen {
     return result;
   }
 
-  public visit(node: ts.Node): Instruction {
+  public visit<T extends Instruction = Instruction>(node: ts.Node): T {
     if (isStatement(node)) {
       this.visitStatement(node);
       return this.lastInstruction();
@@ -321,6 +323,12 @@ export class Codegen {
       return visitWhileStatement(this, node);
     else if (isDoStatement(node))
       return visitDoStatement(this, node);
+    else if (isForStatement(node))
+      return visitForStatement(this, node);
+    else if (isBreakStatement(node))
+      return visitBreakStatement(this, node);
+    else if (isContinueStatement(node))
+      return visitContinueStatement(this, node);
     else if (isIfStatement(node))
       return visitIfStatement(this, node);
     else if (isFunctionDeclaration(node))
@@ -332,16 +340,13 @@ export class Codegen {
         visitVariableDeclaration(this, declaration);
 
       return;
-    } else if (isBreakStatement(node))
-      return visitBreakStatement(this, node);
-    else if (isContinueStatement(node))
-      return visitContinueStatement(this, node);
+    }
 
     this.visitChildren(node);
   }
 
-  private lastInstruction(): Instruction {
-    return this.emitResult.at(-1)!;
+  private lastInstruction<T extends Instruction = Instruction>(): T {
+    return this.emitResult.at(-1)! as T;
   }
 
   private reset(): void {

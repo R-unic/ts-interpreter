@@ -1,6 +1,29 @@
 import ts, { isDoStatement, isElementAccessExpression, isExpression, isForInStatement, isForOfStatement, isForStatement, isFunctionLike, isIdentifier, isPropertyAccessExpression, isStringLiteral, isVariableDeclaration, isWhileStatement } from "typescript";
 
+import { getTargetRegister } from "@/bytecode/utility";
+import { JMP } from "@/bytecode/instructions/jmp";
+import { type InstructionJZ, JZ } from "@/bytecode/instructions/jz";
 import type { Codegen } from "@/codegen";
+
+export function whileLoop(codegen: Codegen, condition: ts.Expression, body: ts.Statement, afterBody?: ts.Expression): void {
+  const start = codegen.currentIndex();
+  const infiniteLoop = isTruthyConstant(condition, codegen);
+  let jz: Writable<InstructionJZ> | undefined;
+  if (!infiniteLoop) {
+    const instruction = codegen.visit(condition);
+    const conditionRegister = getTargetRegister(instruction);
+    codegen.freeRegister(conditionRegister);
+    jz = codegen.pushInstruction(JZ(conditionRegister, -1));
+  }
+
+  codegen.visit(body);
+  if (afterBody) codegen.visit(afterBody);
+  codegen.pushInstruction(JMP(start));
+
+  const end = codegen.currentIndex();
+  codegen.backpatchLoopConstructs(start, end);
+  if (jz) jz.address = end;
+}
 
 export function isTruthyConstant(expression: ts.Expression, codegen: Codegen): boolean {
   return Boolean(codegen.getConstantValue(expression));

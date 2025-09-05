@@ -29,6 +29,9 @@ export function vmValue<T extends VmValueKind>(kind: T, value: VmValueTypes[T]):
     kind, value,
 
     get [Symbol.toStringTag](): string {
+      if (kind === VmValueKind.Null)
+        return "Null";
+
       return VmValueKind[kind] + "(" + inspect(value === undefined ? null : value, INSPECT_OPTIONS) + ")";
     },
     [inspect.custom](): string {
