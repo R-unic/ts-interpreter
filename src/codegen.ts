@@ -23,6 +23,7 @@ import ts, {
   isEnumDeclaration,
   isArrayLiteralExpression
 } from "typescript";
+import assert from "assert";
 
 import { canInline, getTypeOfNode } from "@/ast/utility";
 import { getTargetRegister } from "@/bytecode/utility";
@@ -234,6 +235,13 @@ export class Codegen {
 
   public getType(node: ts.Node): ts.Type | undefined {
     return getTypeOfNode(node, this.checker);
+  }
+
+  public isArrayType(node: ts.Node | ts.Type): boolean {
+    const type = "symbol" in node ? node : this.getType(node);
+    assert(type, "no node type when checking isArrayType()");
+
+    return this.checker.isArrayLikeType(type);
   }
 
   public getTypeOfSymbol(node: ts.Node): [ts.Type, ts.Symbol] | undefined {

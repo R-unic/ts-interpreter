@@ -1,10 +1,10 @@
 import ts, { isIdentifier } from "typescript";
+import assert from "assert";
 
 import { InstructionOp } from "@/bytecode/structs";
 import { binaryInstruction } from "@/bytecode/instructions/binary";
 import { STORE } from "@/bytecode/instructions/store";
 import type { Codegen } from "@/codegen";
-import assert from "assert";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.PlusToken]: InstructionOp.ADD,

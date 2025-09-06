@@ -10,6 +10,8 @@ import { isJZ } from "../instructions/jz";
 import { isJNZ } from "../instructions/jnz";
 import { isCALL } from "../instructions/call";
 import { isARRAY_PUSHK } from "../instructions/array-pushk";
+import { isINDEX } from "../instructions";
+import { isINDEXK } from "../instructions/indexk";
 import type { Instruction } from "../structs";
 import type { VmValue } from "../vm-value";
 
@@ -40,6 +42,9 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     offset += buffer.write(instruction.name, offset);
   } else if (isJMP(instruction) || isJZ(instruction) || isJNZ(instruction) || isCALL(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.address);
+  } else if (isINDEX(instruction) || isINDEXK(instruction)) {
+    offset += writeVarInt(buffer, offset, instruction.object);
+    offset += writeVarInt(buffer, offset, instruction.index);
   }
 
   return { result: buffer.slice(0, offset), bytesWritten: offset };
