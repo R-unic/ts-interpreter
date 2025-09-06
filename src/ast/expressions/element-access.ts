@@ -1,7 +1,6 @@
 import type ts from "typescript";
 
 import { isElementOrPropertyAssignment, pushEnumConstant } from "../utility";
-import { getTargetRegister } from "@/bytecode/utility";
 import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 import { INDEX } from "@/bytecode/instructions";
 import { INDEXK } from "@/bytecode/instructions/indexk";
@@ -11,7 +10,7 @@ import type { Codegen } from "@/codegen";
 function emitAccess(codegen: Codegen, node: ts.ElementAccessExpression): void {
   const objectInstruction = codegen.visit(node.expression);
   const indexInstruction = codegen.visit(node.argumentExpression);
-  const objectRegister = getTargetRegister(objectInstruction);
+  const objectRegister = codegen.getTargetRegister(objectInstruction);
   const value = codegen.getConstantValue(node.argumentExpression);
   const isLoad = isLOADV(indexInstruction);
   if (value !== undefined || isLoad) {
@@ -24,7 +23,7 @@ function emitAccess(codegen: Codegen, node: ts.ElementAccessExpression): void {
   }
 
   const register = codegen.allocRegister();
-  const indexRegister = getTargetRegister(indexInstruction);
+  const indexRegister = codegen.getTargetRegister(indexInstruction);
   codegen.pushInstruction(INDEX(register, objectRegister, indexRegister));
 }
 

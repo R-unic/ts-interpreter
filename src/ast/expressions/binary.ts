@@ -1,10 +1,14 @@
-import ts, { isIdentifier } from "typescript";
+import ts, { isElementAccessExpression, isIdentifier, isPropertyAccessExpression } from "typescript";
 import assert from "assert";
 
 import { InstructionOp } from "@/bytecode/structs";
 import { binaryInstruction } from "@/bytecode/instructions/binary";
+import { isLOADV } from "@/bytecode/instructions/loadv";
 import { STORE } from "@/bytecode/instructions/store";
+import { STORE_INDEX } from "@/bytecode/instructions/store-index";
 import type { Codegen } from "@/codegen";
+import { STORE_INDEXK } from "@/bytecode/instructions/store-indexk";
+import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.PlusToken]: InstructionOp.ADD,
@@ -26,10 +30,34 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
   let rightRegister: number;
   switch (node.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken: {
-      assert(isIdentifier(node.left), "Binding patterns not yet supported");
-
+      // TODO: prop access assignment
       const right = codegen.visit(node.right);
       rightRegister = codegen.getTargetRegister(right);
+
+      if (isElementAccessExpression(node.left)) {
+        const objectInstruction = codegen.visit(node.left.expression);
+        const objectRegister = codegen.getTargetRegister(objectInstruction);
+        const indexInstruction = codegen.visit(node.left.argumentExpression);
+        const value = codegen.getConstantValue(node.left.argumentExpression);
+        const isLoad = isLOADV(indexInstruction);
+        codegen.freeRegister(objectRegister);
+
+        if (value !== undefined || isLoad) {
+          const indexValue = isLoad ? indexInstruction.value : constantVmValue(value!);
+          if (indexValue.kind === VmValueKind.Int) {
+            codegen.undoLastAddition();
+            codegen.pushInstruction(STORE_INDEXK(rightRegister, objectRegister, indexValue.value as number));
+          }
+        } else {
+          const indexRegister = codegen.getTargetRegister(indexInstruction);
+          codegen.pushInstruction(STORE_INDEX(rightRegister, objectRegister, indexRegister));
+          codegen.freeRegister(indexRegister);
+        }
+
+        break;
+      }
+
+      assert(isIdentifier(node.left), "Binding patterns not yet supported");
       codegen.pushInstruction(STORE(rightRegister, node.left.text));
       break;
     }

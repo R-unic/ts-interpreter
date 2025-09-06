@@ -1,6 +1,5 @@
 import type ts from "typescript";
 
-import { getTargetRegister } from "@/bytecode/utility";
 import { isLOADV, LOADV } from "@/bytecode/instructions/loadv";
 import { NEW_ARRAY } from "@/bytecode/instructions/new-array";
 import { ARRAY_PUSH } from "@/bytecode/instructions/array-push";
@@ -24,7 +23,7 @@ export function visitArrayLiteralExpression(codegen: Codegen, node: ts.ArrayLite
   codegen.pushInstruction(NEW_ARRAY(register));
   for (const element of node.elements) {
     const elementInstruction = codegen.visit(element);
-    const elementRegister = getTargetRegister(elementInstruction);
+    const elementRegister = codegen.getTargetRegister(elementInstruction);
     const value = codegen.getConstantValue(element);
     const isLoad = isLOADV(elementInstruction);
     if (value !== undefined || isLoad) {

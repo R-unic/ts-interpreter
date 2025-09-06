@@ -14,6 +14,8 @@ import { isINDEX } from "../instructions";
 import { isINDEXK } from "../instructions/indexk";
 import type { Instruction } from "../structs";
 import type { VmValue } from "../vm-value";
+import { isSTORE_INDEX } from "../instructions/store-index";
+import { isSTORE_INDEXK } from "../instructions/store-indexk";
 
 export function serializeInstruction(instruction: Instruction): { result: Buffer; bytesWritten: number; } {
   const buffer = Buffer.alloc(20);
@@ -42,7 +44,7 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     offset += buffer.write(instruction.name, offset);
   } else if (isJMP(instruction) || isJZ(instruction) || isJNZ(instruction) || isCALL(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.address);
-  } else if (isINDEX(instruction) || isINDEXK(instruction)) {
+  } else if (isINDEX(instruction) || isINDEXK(instruction) || isSTORE_INDEX(instruction) || isSTORE_INDEXK(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.object);
     offset += writeVarInt(buffer, offset, instruction.index);
   }
