@@ -246,8 +246,8 @@ export class Codegen {
   }
 
   public isArrayType(node: ts.Node | ts.Type): boolean {
-    const type = "symbol" in node ? node : this.getType(node);
-    assert(type, "no node type when checking isArrayType()");
+    const type = "pos" in node && "end" in node ? this.getType(node) : node;
+    assert(type !== undefined, "no node type when checking isArrayType()");
 
     return this.checker.isArrayLikeType(type);
   }
