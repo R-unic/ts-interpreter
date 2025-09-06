@@ -1,20 +1,19 @@
-import ts, { isDoStatement, isElementAccessExpression, isExpression, isForInStatement, isForOfStatement, isForStatement, isFunctionLike, isIdentifier, isPropertyAccessExpression, isStringLiteral, isVariableDeclaration, isWhileStatement } from "typescript";
+import ts, { isBinaryExpression, isDoStatement, isElementAccessExpression, isExpression, isForInStatement, isForOfStatement, isForStatement, isFunctionLike, isIdentifier, isPropertyAccessExpression, isStringLiteral, isVariableDeclaration, isWhileStatement } from "typescript";
 
-import { vmValue, VmValueKind } from "@/bytecode/vm-value";
+import { constantVmValue } from "@/bytecode/vm-value";
 import { LOADV } from "@/bytecode/instructions/loadv";
 import { JMP } from "@/bytecode/instructions/jmp";
 import { type InstructionJZ, JZ } from "@/bytecode/instructions/jz";
 import type { Codegen } from "@/codegen";
 
+export function isElementOrPropertyAssignment(node: ts.ElementAccessExpression | ts.PropertyAccessExpression): boolean {
+  return node.parent && isBinaryExpression(node.parent) && node.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken;
+}
+
 export function pushEnumConstant(codegen: Codegen, constantValue: string | number) {
   const register = codegen.allocRegister();
-  const valueKind = typeof constantValue !== "number"
-    ? VmValueKind.String
-    : constantValue % 1 === 0
-      ? VmValueKind.Int
-      : VmValueKind.Float;
 
-  codegen.pushInstruction(LOADV(register, vmValue(valueKind, constantValue)));
+  codegen.pushInstruction(LOADV(register, constantVmValue(constantValue)));
   return codegen.freeRegister(register);
 }
 

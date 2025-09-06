@@ -20,7 +20,8 @@ import ts, {
   isForStatement,
   isPropertyAccessExpression,
   isElementAccessExpression,
-  isEnumDeclaration
+  isEnumDeclaration,
+  isArrayLiteralExpression
 } from "typescript";
 
 import { canInline, getTypeOfNode } from "@/ast/utility";
@@ -46,6 +47,7 @@ import { visitReturnStatement } from "@/ast/statements/return";
 import { visitBreakStatement } from "@/ast/statements/break";
 import { visitContinueStatement } from "@/ast/statements/continue";
 import { visitBlock } from "@/ast/statements/block";
+import { visitArrayLiteralExpression } from "./ast/expressions/array-literal";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
@@ -74,6 +76,7 @@ export class Codegen {
 
   private readonly checker: ts.TypeChecker;
   private emitResult: Instruction[] = [];
+  private previousEmitResult: Instruction[] = [];
   private functions = new Map<ts.Symbol, FunctionLabel>;
   private allocatedRegisters = new Set<number>;
   private closestFreeRegister = 0;
@@ -130,18 +133,26 @@ export class Codegen {
     ts.forEachChild(node, node => this.visit(node));
   }
 
-  public pushInstruction<T extends Instruction, W extends boolean>(instruction: T): Writable<T> {
+  public pushInstruction<T extends Instruction>(instruction: T): Writable<T> {
+    this.previousEmitResult = [...this.emitResult];
     this.emitResult.push(instruction);
     return instruction as never;
+  }
+
+  public pushInstructions(instructions: Bytecode): void {
+    const current = [...this.emitResult];
+    for (const instruction of instructions)
+      this.pushInstruction(instruction);
+
+    this.previousEmitResult = current;
   }
 
   public popInstruction(): Instruction | undefined {
     return this.emitResult.pop();
   }
 
-  public pushBytecode(bytecode: Bytecode): void {
-    for (const instruction of bytecode)
-      this.pushInstruction(instruction);
+  public undoLastAddition(): void {
+    this.emitResult = this.previousEmitResult;
   }
 
   public allocRegister(): number {
@@ -241,6 +252,10 @@ export class Codegen {
     return symbol;
   }
 
+  public isConstant(node: ts.Expression): boolean {
+    return this.getConstantValue(node) !== undefined
+  }
+
   public getConstantValue(node: ts.Expression): string | number | boolean | undefined {
     if (node.kind === ts.SyntaxKind.TrueKeyword)
       return true;
@@ -328,6 +343,8 @@ export class Codegen {
       return visitNumericLiteral(this, node);
     else if (isStringLiteral(node))
       return visitStringLiteral(this, node);
+    else if (isArrayLiteralExpression(node))
+      return visitArrayLiteralExpression(this, node);
     else if (node.kind === ts.SyntaxKind.TrueKeyword)
       return visitTrueLiteral(this, node as never);
     else if (node.kind === ts.SyntaxKind.FalseKeyword)

@@ -20,6 +20,17 @@ export enum InstructionOp {
   GTE,
   NOT,
 
+  INC,
+  DEC,
+  INDEX,
+  INDEXK,
+  STORE_INDEX,
+  STORE_INDEXK,
+  NEW_ARRAY,
+  ARRAY_PUSH,
+  ARRAY_PUSHK,
+  ARRAY_LEN,
+
   JMP,
   JZ,
   JNZ,
