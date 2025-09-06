@@ -27,12 +27,10 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
 };
 
 export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpression): void {
-  let rightRegister: number;
+  let rightRegister: number = -1;
   switch (node.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken: {
       // TODO: prop access assignment
-      const right = codegen.visit(node.right);
-      rightRegister = codegen.getTargetRegister(right);
 
       if (isElementAccessExpression(node.left)) {
         const objectInstruction = codegen.visit(node.left.expression);
@@ -40,24 +38,31 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
         const indexInstruction = codegen.visit(node.left.argumentExpression);
         const value = codegen.getConstantValue(node.left.argumentExpression);
         const isLoad = isLOADV(indexInstruction);
-        codegen.freeRegister(objectRegister);
 
         if (value !== undefined || isLoad) {
           const indexValue = isLoad ? indexInstruction.value : constantVmValue(value!);
           if (indexValue.kind === VmValueKind.Int) {
             codegen.undoLastAddition();
+
+            const right = codegen.visit(node.right);
+            rightRegister = codegen.getTargetRegister(right);
             codegen.pushInstruction(STORE_INDEXK(rightRegister, objectRegister, indexValue.value as number));
           }
         } else {
           const indexRegister = codegen.getTargetRegister(indexInstruction);
+          const right = codegen.visit(node.right);
+          rightRegister = codegen.getTargetRegister(right);
           codegen.pushInstruction(STORE_INDEX(rightRegister, objectRegister, indexRegister));
           codegen.freeRegister(indexRegister);
         }
 
+        codegen.freeRegister(objectRegister);
         break;
       }
 
       assert(isIdentifier(node.left), "Binding patterns not yet supported");
+      const right = codegen.visit(node.right);
+      rightRegister = codegen.getTargetRegister(right);
       codegen.pushInstruction(STORE(rightRegister, node.left.text));
       break;
     }

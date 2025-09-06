@@ -26,7 +26,7 @@ import ts, {
 import assert from "assert";
 
 import { canInline, getTypeOfNode } from "@/ast/utility";
-import { getTargetRegister } from "@/bytecode/utility";
+import { getTargetRegister, maybeGetTargetRegister } from "@/bytecode/utility";
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
 import { visitNumericLiteral } from "@/ast/expressions/numeric-literal";
@@ -153,6 +153,14 @@ export class Codegen {
   }
 
   public undoLastAddition(): void {
+    const set = new Set(this.previousEmitResult);
+    const difference = this.emitResult.filter(v => !set.has(v));
+    for (const instruction of difference) {
+      const register = maybeGetTargetRegister(instruction);
+      if (register === undefined) continue;
+      this.freeRegister(register);
+    }
+
     this.emitResult = this.previousEmitResult;
   }
 
