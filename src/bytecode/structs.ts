@@ -56,3 +56,9 @@ export interface BinaryInstruction<T extends InstructionOp = InstructionOp> exte
   readonly a: number;
   readonly b: number;
 }
+
+export interface UnaryInstruction<T extends InstructionOp = InstructionOp> extends Instruction {
+  readonly op: T;
+  readonly target: number;
+  readonly operand: number;
+}

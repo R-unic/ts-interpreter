@@ -17,11 +17,13 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.SlashToken]: InstructionOp.DIV,
   [ts.SyntaxKind.PercentToken]: InstructionOp.MOD,
   [ts.SyntaxKind.AsteriskAsteriskToken]: InstructionOp.POW,
+  // [ts.SyntaxKind.CaretToken]: InstructionOp.BXOR,
+  // [ts.SyntaxKind.AmpersandToken]: InstructionOp.BAND,
+  // [ts.SyntaxKind.BarToken]: InstructionOp.BOR,
   [ts.SyntaxKind.LessThanToken]: InstructionOp.LT,
   [ts.SyntaxKind.LessThanEqualsToken]: InstructionOp.LTE,
   [ts.SyntaxKind.GreaterThanToken]: InstructionOp.GT,
   [ts.SyntaxKind.GreaterThanEqualsToken]: InstructionOp.GTE,
-  // [ts.SyntaxKind.EqualsEqualsToken]: InstructionOp.EQ,
   [ts.SyntaxKind.EqualsEqualsEqualsToken]: InstructionOp.EQ,
   [ts.SyntaxKind.ExclamationEqualsEqualsToken]: InstructionOp.NEQ,
 };
@@ -73,7 +75,7 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
       if (op === undefined)
         throw new Error(`Unsupported binary operator ${ts.SyntaxKind[node.operatorToken.kind]}`);
 
-      // replace the left register value with the result
+      // replace the left register's value with the result
       const left = codegen.visit(node.left);
       const leftRegister = codegen.getTargetRegister(left);
       const right = codegen.visit(node.right);

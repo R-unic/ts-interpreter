@@ -58,5 +58,8 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     offset += writeVarInt(buffer, offset, instruction.index);
   }
 
+  if ("operand" in instruction && typeof instruction.operand === "number")
+    offset += writeVarInt(buffer, offset, instruction.operand);
+
   return { result: buffer.slice(0, offset), bytesWritten: offset };
 }

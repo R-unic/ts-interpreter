@@ -57,6 +57,7 @@ import { HALT } from "@/bytecode/instructions/halt";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
+import { visitPrefixUnaryExpression } from "./ast/expressions/prefix-unary";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -391,6 +392,8 @@ export class Codegen {
       visitCallExpression(this, node);
     else if (isBinaryExpression(node))
       visitBinaryExpression(this, node);
+    else if (isPrefixUnaryExpression(node))
+      visitPrefixUnaryExpression(this, node);
     else if (isNumericLiteral(node))
       visitNumericLiteral(this, node);
     else if (isStringLiteral(node))
