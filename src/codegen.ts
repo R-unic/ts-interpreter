@@ -280,7 +280,33 @@ export class Codegen {
     if (isStringLiteral(node))
       return node.text;
     if (isBinaryExpression(node)) {
-      // TODO: constant folding
+      const left = this.getConstantValue(node.left);
+      const right = this.getConstantValue(node.right);
+      if (left && right) {
+        // TODO: constant folding
+        if (typeof left === "number" && typeof right === "number") {
+          switch (node.operatorToken.kind) {
+            case ts.SyntaxKind.PlusToken:
+              return left + right;
+            case ts.SyntaxKind.MinusToken:
+              return left - right;
+            case ts.SyntaxKind.AsteriskToken:
+              return left * right;
+            case ts.SyntaxKind.AsteriskAsteriskToken:
+              return left ** right;
+            case ts.SyntaxKind.SlashToken:
+              return left / right;
+            case ts.SyntaxKind.PercentToken:
+              return left % right;
+            case ts.SyntaxKind.CaretToken:
+              return left ^ right;
+            case ts.SyntaxKind.AmpersandToken:
+              return left & right;
+            case ts.SyntaxKind.BarToken:
+              return left | right;
+          }
+        }
+      }
     }
     if (isPrefixUnaryExpression(node)) {
       // TODO: constant folding
