@@ -21,7 +21,8 @@ import ts, {
   isPropertyAccessExpression,
   isElementAccessExpression,
   isEnumDeclaration,
-  isArrayLiteralExpression
+  isArrayLiteralExpression,
+  isDeleteExpression
 } from "typescript";
 import assert from "assert";
 
@@ -54,6 +55,7 @@ import { HALT } from "@/bytecode/instructions/halt";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
+import { visitDeleteExpression } from "./ast/expressions/delete";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -352,58 +354,57 @@ export class Codegen {
 
   private visitExpression(node: ts.Expression): void {
     if (isCallExpression(node))
-      return visitCallExpression(this, node);
+      visitCallExpression(this, node);
     else if (isBinaryExpression(node))
-      return visitBinaryExpression(this, node);
+      visitBinaryExpression(this, node);
     else if (isNumericLiteral(node))
-      return visitNumericLiteral(this, node);
+      visitNumericLiteral(this, node);
     else if (isStringLiteral(node))
-      return visitStringLiteral(this, node);
+      visitStringLiteral(this, node);
     else if (isArrayLiteralExpression(node))
-      return visitArrayLiteralExpression(this, node);
+      visitArrayLiteralExpression(this, node);
     else if (node.kind === ts.SyntaxKind.TrueKeyword)
-      return visitTrueLiteral(this, node as never);
+      visitTrueLiteral(this, node as never);
     else if (node.kind === ts.SyntaxKind.FalseKeyword)
-      return visitFalseLiteral(this, node as never);
+      visitFalseLiteral(this, node as never);
     else if (isIdentifier(node))
-      return visitIdentifier(this, node);
+      visitIdentifier(this, node);
     else if (isPropertyAccessExpression(node))
-      return visitPropertyAccessExpression(this, node);
+      visitPropertyAccessExpression(this, node);
     else if (isElementAccessExpression(node))
-      return visitElementAccessExpression(this, node);
-
-    this.visitChildren(node);
+      visitElementAccessExpression(this, node);
+    else if (isDeleteExpression(node))
+      visitDeleteExpression(this, node);
+    else
+      this.visitChildren(node);
   }
 
   private visitStatement(node: ts.Statement): void {
     if (isBlock(node))
-      return visitBlock(this, node);
+      visitBlock(this, node);
     else if (isWhileStatement(node))
-      return visitWhileStatement(this, node);
+      visitWhileStatement(this, node);
     else if (isDoStatement(node))
-      return visitDoStatement(this, node);
+      visitDoStatement(this, node);
     else if (isForStatement(node))
-      return visitForStatement(this, node);
+      visitForStatement(this, node);
     else if (isBreakStatement(node))
-      return visitBreakStatement(this, node);
+      visitBreakStatement(this, node);
     else if (isContinueStatement(node))
-      return visitContinueStatement(this, node);
+      visitContinueStatement(this, node);
     else if (isIfStatement(node))
-      return visitIfStatement(this, node);
+      visitIfStatement(this, node);
     else if (isFunctionDeclaration(node))
-      return visitFunctionDeclaration(this, node);
+      visitFunctionDeclaration(this, node);
     else if (isReturnStatement(node))
-      return visitReturnStatement(this, node);
+      visitReturnStatement(this, node);
     else if (isEnumDeclaration(node))
-      return visitEnumDeclaration(this, node);
-    else if (isVariableStatement(node)) {
+      visitEnumDeclaration(this, node);
+    else if (isVariableStatement(node))
       for (const declaration of node.declarationList.declarations)
         visitVariableDeclaration(this, declaration);
-
-      return;
-    }
-
-    this.visitChildren(node);
+    else
+      this.visitChildren(node);
   }
 
   private lastInstruction<T extends Instruction = Instruction>(): T {

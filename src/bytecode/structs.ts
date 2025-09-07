@@ -26,6 +26,8 @@ export enum InstructionOp {
   INDEXK,
   STORE_INDEX,
   STORE_INDEXK,
+  DELETE_INDEX,
+  DELETE_INDEXK,
   NEW_ARRAY,
   ARRAY_PUSH,
   ARRAY_PUSHK,

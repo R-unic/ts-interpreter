@@ -46,6 +46,7 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
 
             const right = codegen.visit(node.right);
             rightRegister = codegen.getTargetRegister(right);
+            assert(typeof indexValue.value === "number", "STORE_INDEXK value is not a number");
             codegen.pushInstruction(STORE_INDEXK(rightRegister, objectRegister, indexValue.value as number));
           }
         } else {

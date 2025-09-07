@@ -1,4 +1,5 @@
 import type ts from "typescript";
+import assert from "assert";
 
 import { isElementOrPropertyAssignment, pushEnumConstant } from "../utility";
 import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
@@ -18,6 +19,7 @@ function emitAccess(codegen: Codegen, node: ts.ElementAccessExpression): void {
     if (indexValue.kind === VmValueKind.Int) {
       const register = isLoad ? indexInstruction.target : codegen.allocRegister();
       codegen.undoLastAddition();
+      assert(typeof indexValue.value === "number", "INDEXK value is not a number");
       return void codegen.pushInstruction(INDEXK(register, objectRegister, indexValue.value as number));
     }
   }
