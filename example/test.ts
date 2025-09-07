@@ -1,1 +1,0 @@
-console.log("abc" as string === "a")

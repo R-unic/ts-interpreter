@@ -41,6 +41,6 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
     codegen.addCallToPatch(functionSymbol!, instruction);
     codegen.pushInstruction(instruction);
   } else {
-    throw new Error("Regular function calls (not inlined) are not yet implemented");
+    throw new Error("Failed to find function label for function: " + functionSymbol?.name);
   }
 }
