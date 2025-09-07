@@ -11,8 +11,8 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
   if (macro)
     return macro();
 
-  const symbol = codegen.getSymbol(node.expression);
-  const label = codegen.getFunctionLabel(symbol);
+  const functionSymbol = codegen.getSymbol(node.expression);
+  const label = codegen.getFunctionLabel(functionSymbol);
   if (label !== undefined) {
     // TODO: blah blah scoping blah blah
 
@@ -38,7 +38,7 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
     }
 
     const instruction = CALL(-1);
-    codegen.addCallToPatch(symbol!, instruction);
+    codegen.addCallToPatch(functionSymbol!, instruction);
     codegen.pushInstruction(instruction);
   } else {
     throw new Error("Regular function calls (not inlined) are not yet implemented");

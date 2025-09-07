@@ -46,7 +46,6 @@ export function getCallMacro(node: ts.CallExpression, codegen: Codegen): (() => 
         const instruction = codegen.visit(item);
         const constantValue = codegen.getConstantValue(item);
         const isLoad = isLOADV(instruction);
-        console.log(constantValue, isLoad, instruction)
         if (constantValue !== undefined || isLoad) {
           codegen.undoLastAddition();
           codegen.pushInstruction(ARRAY_PUSHK(arrayRegister, isLoad ? instruction.value : constantVmValue(constantValue!)));

@@ -1,6 +1,5 @@
-function sayHello(): string {
-  return "Hello, world!";
+function sayHello(): void {
+  console.log("Hello, world!")
 }
 
-10;
 sayHello();

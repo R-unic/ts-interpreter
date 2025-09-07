@@ -6,17 +6,43 @@ import { JMP } from "@/bytecode/instructions/jmp";
 import { type InstructionJZ, JZ } from "@/bytecode/instructions/jz";
 import type { Codegen } from "@/codegen";
 
+/**
+ * Returns true if the given variable can be inlined. This is only true if the variable
+ * is declared as a constant and has a constant initializer.
+ */
+export function canInlineVariable(node: ts.VariableDeclaration, codegen: Codegen): node is ts.VariableDeclaration & { initializer: ts.Expression } {
+  const list = node.parent as ts.VariableDeclarationList;
+  return (list.flags & ts.NodeFlags.Const) !== 0
+    && node.initializer !== undefined
+    && codegen.isConstant(node.initializer);
+}
+
+export function hasModifier(node: ts.HasModifiers, kind: ts.ModifierSyntaxKind): boolean {
+  return node.modifiers !== undefined && node.modifiers.some(modifier => modifier.kind === kind);
+}
+
+/**
+ * Returns true if the given property or element access expression is a left-hand side of an assignment.
+ */
 export function isElementOrPropertyAssignment(node: ts.ElementAccessExpression | ts.PropertyAccessExpression): boolean {
   return node.parent && isBinaryExpression(node.parent) && node.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken;
 }
 
-export function pushEnumConstant(codegen: Codegen, constantValue: string | number) {
+export function pushEnumConstant(codegen: Codegen, constantValue: string | number): void {
   const register = codegen.allocRegister();
 
   codegen.pushInstruction(LOADV(register, constantVmValue(constantValue)));
   return codegen.freeRegister(register);
 }
 
+/**
+ * Generates code for a while loop. The condition is evaluated at the top of the loop,
+ * and the loop body is executed if the condition evaluates to true. The afterBody
+ * argument is optional, and is executed after the loop body on each iteration.
+ * @param condition The condition to evaluate at the top of the loop.
+ * @param body The loop body.
+ * @param afterBody The expression to execute after the loop body on each iteration.
+ */
 export function whileLoop(codegen: Codegen, condition: ts.Expression, body: ts.Statement, afterBody?: ts.Expression): void {
   const start = codegen.currentIndex();
   const infiniteLoop = isTruthyConstant(condition, codegen);
@@ -37,6 +63,7 @@ export function whileLoop(codegen: Codegen, condition: ts.Expression, body: ts.S
   if (jz) jz.address = end;
 }
 
+/** Returns true if the given expression evaluates to a truthy constant value. */
 export function isTruthyConstant(expression: ts.Expression, codegen: Codegen): boolean {
   return Boolean(codegen.getConstantValue(expression));
 }
@@ -67,7 +94,7 @@ export function getTypeOfNode(node: ts.Node, checker: ts.TypeChecker): ts.Type |
 }
 
 /** Returns true for simple functions -- those with no loops, closures, or direct recursion */
-export function canInline(fn: ts.FunctionDeclaration, codegen: Codegen): boolean {
+export function canInlineFunction(fn: ts.FunctionDeclaration, codegen: Codegen): boolean {
   if (fn.body === undefined)
     return false;
 

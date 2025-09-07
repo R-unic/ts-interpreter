@@ -22,11 +22,12 @@ import ts, {
   isElementAccessExpression,
   isEnumDeclaration,
   isArrayLiteralExpression,
-  isDeleteExpression
+  isDeleteExpression,
+  isPrefixUnaryExpression
 } from "typescript";
 import assert from "assert";
 
-import { canInline, getTypeOfNode } from "@/ast/utility";
+import { canInlineFunction, canInlineVariable, getTypeOfNode } from "@/ast/utility";
 import { getTargetRegister, maybeGetTargetRegister } from "@/bytecode/utility";
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
@@ -50,12 +51,12 @@ import { visitBreakStatement } from "@/ast/statements/break";
 import { visitContinueStatement } from "@/ast/statements/continue";
 import { visitBlock } from "@/ast/statements/block";
 import { visitArrayLiteralExpression } from "./ast/expressions/array-literal";
+import { visitDeleteExpression } from "./ast/expressions/delete";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
-import { visitDeleteExpression } from "./ast/expressions/delete";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -105,23 +106,18 @@ export class Codegen {
   }
 
   public visit<T extends Instruction = Instruction>(node: ts.Node): T {
-    if (isStatement(node)) {
+    if (isStatement(node))
       this.visitStatement(node);
-      return this.lastInstruction();
-    } else if (isExpression(node)) {
+    else if (isExpression(node))
       this.visitExpression(node);
-      return this.lastInstruction();
-    } else if (isVariableDeclaration(node)) {
+    else if (isVariableDeclaration(node))
       visitVariableDeclaration(this, node);
-      return this.lastInstruction();
-    } else if (isParameter(node)) {
+    else if (isParameter(node))
       visitParameterDeclaration(this, node);
-      return this.lastInstruction();
-    } else {
+    else
       // console.warn("Unhandled non-statement and non-expression: " + ts.SyntaxKind[node.kind]);
-    }
+      this.visitChildren(node);
 
-    this.visitChildren(node);
     return this.lastInstruction();
   }
 
@@ -234,7 +230,7 @@ export class Codegen {
 
     this.functions.set(symbol, {
       declaration: node,
-      inlined: canInline(node, this),
+      inlined: canInlineFunction(node, this),
       symbol,
     });
   }
@@ -258,8 +254,8 @@ export class Codegen {
     const symbol = this.getSymbol(node);
     if (!symbol) return;
 
-    const newLocal = this.checker.getTypeOfSymbolAtLocation(symbol, node);
-    return [newLocal, symbol];
+    const type = this.checker.getTypeOfSymbolAtLocation(symbol, node);
+    return [type, symbol];
   }
 
   public getUnaliasedSymbol(node: ts.Node): ts.Symbol | undefined {
@@ -271,10 +267,10 @@ export class Codegen {
   }
 
   public isConstant(node: ts.Expression): boolean {
-    return this.getConstantValue(node) !== undefined
+    return this.getConstantValue(node) !== undefined;
   }
 
-  public getConstantValue(node: ts.Expression): string | number | boolean | undefined {
+  public getConstantValue(node: ts.Node): string | number | boolean | undefined {
     if (node.kind === ts.SyntaxKind.TrueKeyword)
       return true;
     if (node.kind === ts.SyntaxKind.FalseKeyword)
@@ -283,17 +279,29 @@ export class Codegen {
       return Number(node.text);
     if (isStringLiteral(node))
       return node.text;
+    if (isBinaryExpression(node)) {
+      // TODO: constant folding
+    }
+    if (isPrefixUnaryExpression(node)) {
+      // TODO: constant folding
+    }
 
     if (ts.isIdentifier(node)) {
-      const result = this.getTypeOfSymbol(node);
-      if (result) {
-        const [type, symbol] = result;
-        if ((type.flags & ts.TypeFlags.Literal) !== 0)
-          return (type as ts.LiteralType).value as never;
-
+      const symbol = this.getSymbol(node);
+      if (symbol) {
         const declaration = symbol.valueDeclaration;
-        if (declaration && isVariableDeclaration(declaration) && declaration.initializer)
-          return this.getConstantValue(declaration.initializer);
+        if (declaration) {
+          if (isVariableDeclaration(declaration) && canInlineVariable(declaration, this))
+            return this.getConstantValue(declaration.initializer);
+          else if (isParameter(declaration)) {
+            const symbol = this.getSymbol(declaration.name);
+            assert(symbol, "no symbol for parameter");
+
+            const value = this.parameterValues.get(symbol);
+            if (value !== undefined)
+              return this.getConstantValue(value);
+          }
+        }
       }
     }
 
