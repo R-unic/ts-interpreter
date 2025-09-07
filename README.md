@@ -4,7 +4,7 @@ Experimental bytecode interpreter for TypeScript which targets the [Ryde VM](htt
 
 ## Examples
 
-Check out [https://github.com/R-unic/ts-interpreter/tree/master/example](the examples directory) to see everything currently supported
+Check out [the examples directory](https://github.com/R-unic/ts-interpreter/tree/master/example) to see everything currently supported
 
 ## Will not be implemented
 
