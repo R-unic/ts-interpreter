@@ -1,26 +1,15 @@
-import ts, { isIdentifier, isPropertyAccessExpression } from "typescript";
+import ts from "typescript";
 import assert from "assert";
 
+import { getCallMacro } from "../macros/call";
 import { InstructionOp } from "@/bytecode/structs";
 import { CALL } from "@/bytecode/instructions/call";
-import { PRINT } from "@/bytecode/instructions/print";
 import type { Codegen } from "@/codegen";
 
 export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): void {
-  if (
-    isPropertyAccessExpression(node.expression)
-    && isIdentifier(node.expression.expression)
-    && isIdentifier(node.expression.name)
-    && node.expression.expression.text === "console"
-    && node.expression.name.text === "log"
-  ) { // for testing
-    const instruction = codegen.visit(node.arguments[0]!);
-    const register = codegen.getTargetRegister(instruction);
-    codegen.pushInstruction(PRINT(register));
-    codegen.freeRegister(register);
-
-    return;
-  }
+  const macro = getCallMacro(node, codegen);
+  if (macro)
+    return macro();
 
   const symbol = codegen.getSymbol(node.expression);
   const label = codegen.getFunctionLabel(symbol);

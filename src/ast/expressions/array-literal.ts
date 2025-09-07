@@ -16,7 +16,7 @@ export function visitArrayLiteralExpression(codegen: Codegen, node: ts.ArrayLite
     for (const constant of constants)
       array.push(constantVmValue(constant));
 
-    const value = vmValue(VmValueKind.Array, array);
+    const value = vmValue(VmValueKind.DynamicArray, array);
     return void codegen.pushInstruction(LOADV(register, value));
   }
 

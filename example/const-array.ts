@@ -1,2 +1,3 @@
-const x = [1, 2, 3]
-console.log(x.length)
+const arr: number[] = [];
+arr.push(69, 420);
+console.log(arr);

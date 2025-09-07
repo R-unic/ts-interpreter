@@ -26,7 +26,7 @@ export function serializeVmValue({ value, kind }: VmValue): { result: Buffer; by
     const { length } = s;
     offset += writeVarInt(buffer, offset, length);
     offset += buffer.write(s, offset);
-  } else if (kind === VmValueKind.Array) {
+  } else if (kind === VmValueKind.DynamicArray) {
     const arr = value as unknown[];
     const { length } = arr;
     offset += writeVarInt(buffer, offset, length);
