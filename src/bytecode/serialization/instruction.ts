@@ -21,28 +21,32 @@ import { isDELETE_INDEXN } from "../instructions/delete-indexn";
 import { isDELETE_INDEXK } from "../instructions/delete-indexk";
 import { VmValueKind, type VmValue } from "../vm-value";
 import type { Instruction } from "../structs";
+import { isINC } from "../instructions/inc";
+import { isDEC } from "../instructions/dec";
 
-export function serializeInstruction(instruction: Instruction): { result: Buffer; bytesWritten: number; } {
+function getBytesOccupiedByStrings(instruction: Instruction): number {
   let stringBytes = 0;
   for (const value of Object.values(instruction)) {
     let s: string | undefined;
     if (typeof value === "string")
-      s = value
-    else if (
-      typeof value === "object"
+      s = value;
+    else if (typeof value === "object"
       && "kind" in value
       && "value" in value
       && value.kind === VmValueKind.String
-      && typeof value.value === "string"
-    ) {
-      s = value.value
+      && typeof value.value === "string") {
+      s = value.value;
     }
 
     if (s === undefined) continue;
     stringBytes += Buffer.byteLength(s, "utf8");
   }
 
-  // console.log(stringBytes)
+  return stringBytes;
+}
+
+export function serializeInstruction(instruction: Instruction): { result: Buffer; bytesWritten: number; } {
+  const stringBytes = getBytesOccupiedByStrings(instruction);
   const buffer = Buffer.alloc(20 + stringBytes);
   let offset = writeVarInt(buffer, 0, instruction.op);
 
@@ -52,21 +56,37 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     offset += bytesWritten;
   }
 
+  function writeOptionalInt(value: number | undefined): void {
+    buffer.writeUInt8(value !== undefined ? 1 : 0, offset);
+    offset += 1;
+    if (value !== undefined)
+      offset += writeVarInt(buffer, offset, value);
+  }
+
   const target = maybeGetTargetRegister(instruction);
-  const source = maybeGetSourceRegister(instruction);
-  if (target !== undefined)
-    offset += writeVarInt(buffer, offset, target);
-  if (source !== undefined)
-    offset += writeVarInt(buffer, offset, source);
+  const isIncrementor = isINC(instruction) || isDEC(instruction);
+  if (isIncrementor) {
+    writeOptionalInt(target);
+  } else {
+    const source = maybeGetSourceRegister(instruction);
+    if (target !== undefined)
+      offset += writeVarInt(buffer, offset, target);
+    if (source !== undefined)
+      offset += writeVarInt(buffer, offset, source);
+  }
 
   if (isBinary(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.a);
     offset += writeVarInt(buffer, offset, instruction.b);
   } else if (isLOADV(instruction) || isARRAY_PUSHK(instruction))
     writeVmValue(instruction.value);
-  else if (isSTORE(instruction) || isLOAD(instruction)) {
+  else if (isSTORE(instruction) || isLOAD(instruction) || isIncrementor) {
     offset += writeVarInt(buffer, offset, instruction.name.length);
     offset += buffer.write(instruction.name, offset);
+    if (isIncrementor) {
+      buffer.writeUInt8(instruction.returnsOld ? 1 : 0, offset);
+      offset += 1;
+    }
   } else if (isJMP(instruction) || isJZ(instruction) || isJNZ(instruction) || isCALL(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.address);
   } else if (

@@ -23,7 +23,8 @@ import ts, {
   isEnumDeclaration,
   isArrayLiteralExpression,
   isDeleteExpression,
-  isPrefixUnaryExpression
+  isPrefixUnaryExpression,
+  isPostfixUnaryExpression
 } from "typescript";
 import assert from "assert";
 
@@ -58,6 +59,7 @@ import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/struc
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
 import { visitPrefixUnaryExpression } from "./ast/expressions/prefix-unary";
+import { visitPostfixUnaryExpression } from "./ast/expressions/postfix-unary";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -187,7 +189,7 @@ export class Codegen {
   /**
    * Returns the target register for the given instruction, or the last allocated register
    * if no target register could be found.
-   * @param instruction - The instruction to get the target register from
+   * @param instruction The instruction to get the target register from
    */
   public getTargetRegister(instruction: Instruction): number {
     try {
@@ -408,6 +410,8 @@ export class Codegen {
       visitBinaryExpression(this, node);
     else if (isPrefixUnaryExpression(node))
       visitPrefixUnaryExpression(this, node);
+    else if (isPostfixUnaryExpression(node))
+      visitPostfixUnaryExpression(this, node);
     else if (isNumericLiteral(node))
       visitNumericLiteral(this, node);
     else if (isStringLiteral(node))

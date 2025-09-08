@@ -1,10 +1,48 @@
-import ts, { isBinaryExpression, isDoStatement, isElementAccessExpression, isExpression, isForInStatement, isForOfStatement, isForStatement, isFunctionLike, isIdentifier, isPropertyAccessExpression, isStringLiteral, isVariableDeclaration, isWhileStatement } from "typescript";
+import ts, {
+  findAncestor,
+  isBinaryExpression,
+  isCallExpression,
+  isDoStatement,
+  isElementAccessExpression,
+  isExpression,
+  isExpressionStatement,
+  isForInStatement,
+  isForOfStatement,
+  isForStatement,
+  isFunctionLike,
+  isIdentifier,
+  isPropertyAccessExpression,
+  isVariableDeclaration,
+  isWhileStatement
+} from "typescript";
 
 import { constantVmValue } from "@/bytecode/vm-value";
 import { LOADV } from "@/bytecode/instructions/loadv";
+import { INC } from "@/bytecode/instructions/inc";
+import { DEC } from "@/bytecode/instructions/dec";
 import { JMP } from "@/bytecode/instructions/jmp";
 import { type InstructionJZ, JZ } from "@/bytecode/instructions/jz";
 import type { Codegen } from "@/codegen";
+
+/**
+ * Emits a increment/decrement instruction for the given AST node.
+ * @param codegen The codegen to emit to.
+ * @param node The AST node to emit for.
+ * @param returnsOld Whether the increment/decrement instruction should return the old value.
+ */
+export function emitIncrementor(codegen: Codegen, node: ts.PrefixUnaryExpression | ts.PostfixUnaryExpression, returnsOld: boolean): void {
+  const op = node.operator === ts.SyntaxKind.PlusPlusToken ? INC : DEC;
+  const isAlone = findAncestor(node, a => isExpressionStatement(a)
+    && !isCallExpression(a.expression)
+    && !isElementAccessExpression(a.expression)
+  );
+  const targetRegister = isAlone ? undefined : codegen.allocRegister();
+  if (isIdentifier(node.operand))
+    codegen.pushInstruction(op(targetRegister, node.operand.text, returnsOld));
+  else {
+    throw new Error("Incrementing/decrementing non-identifiers is not yet supported");
+  }
+}
 
 /**
  * Returns true if the given variable can be inlined. This is only true if the variable

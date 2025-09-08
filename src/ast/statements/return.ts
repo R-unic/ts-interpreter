@@ -1,22 +1,12 @@
-import ts from "typescript";
+import ts, { findAncestor, isFunctionLike } from "typescript";
 
 import { loadNull } from "@/bytecode/utility";
 import { RETURN } from "@/bytecode/instructions/return";
-import type { Codegen } from "@/codegen";
 import { JMP } from "@/bytecode/instructions/jmp";
-
-function findFunctionLikeAncestor(node: ts.Node): ts.SignatureDeclaration | undefined {
-  const parent = node.parent;
-  if (!parent) return;
-
-  if (ts.isFunctionLike(parent))
-    return parent;
-
-  return findFunctionLikeAncestor(parent);
-}
+import type { Codegen } from "@/codegen";
 
 export function visitReturnStatement(codegen: Codegen, node: ts.ReturnStatement): void {
-  const functionDeclaration = findFunctionLikeAncestor(node);
+  const functionDeclaration = findAncestor(node, isFunctionLike);
   if (!functionDeclaration)
     throw new Error("Failed to find return statement's function declaration");
 

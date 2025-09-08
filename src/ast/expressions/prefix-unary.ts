@@ -1,8 +1,9 @@
 import ts from "typescript";
 
-import type { Codegen } from "@/codegen";
-import { InstructionOp } from "@/bytecode/structs";
+import { emitIncrementor } from "../utility";
 import { unaryInstruction } from "@/bytecode/instructions/unary";
+import { InstructionOp } from "@/bytecode/structs";
+import type { Codegen } from "@/codegen";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.PrefixUnaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.ExclamationToken]: InstructionOp.NOT,
@@ -15,6 +16,12 @@ export function visitPrefixUnaryExpression(codegen: Codegen, node: ts.PrefixUnar
     case ts.SyntaxKind.PlusToken:
       codegen.visit(node.operand);
       break;
+
+    case ts.SyntaxKind.PlusPlusToken:
+    case ts.SyntaxKind.MinusMinusToken: {
+      emitIncrementor(codegen, node, false);
+      break;
+    }
 
     default: {
       const op = OPERATOR_OPCODE_MAP[node.operator];
