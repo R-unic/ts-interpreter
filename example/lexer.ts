@@ -17,13 +17,20 @@ function lex(tokens: TokenType[], char: string): void {
     kind = TokenType.Slash;
 
   if (!kind) {
-    console.log("Unexpected character: " + char);
+    console.log("Unexpected character: '" + char + "'");
     return;
   }
 
   tokens.push(kind);
 }
 
+const source = "+-*/";
 const tokens: TokenType[] = [];
-lex(tokens, "`");
+for (let i = 0; i < source.length; i = i + 1) {
+  console.log(i)
+  console.log(source)
+  console.log(source[i])
+  lex(tokens, source[i]);
+}
+
 console.log(tokens);

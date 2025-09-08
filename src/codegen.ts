@@ -246,11 +246,19 @@ export class Codegen {
     return getTypeOfNode(node, this.checker);
   }
 
-  public isArrayType(node: ts.Node | ts.Type): boolean {
-    const type = "pos" in node && "end" in node ? this.getType(node) : node;
-    assert(type !== undefined, "no node type when checking isArrayType()");
+  public isArrayLikeType(node: ts.Node | ts.Type): boolean {
+    const type = this.pickType(node);
+    assert(type !== undefined, "no node type when checking " + this.isArrayLikeType.name);
 
     return this.checker.isArrayLikeType(type);
+  }
+
+  public isStringLikeType(node: ts.Node | ts.Type): boolean {
+    const type = this.pickType(node);
+    assert(type !== undefined, "no node type when checking " + this.isStringLikeType.name);
+
+    const base = this.checker.getBaseTypeOfLiteralType(type);
+    return (base.flags & ts.TypeFlags.String) !== 0;
   }
 
   public getTypeOfSymbol(node: ts.Node): [ts.Type, ts.Symbol] | undefined {
@@ -387,6 +395,10 @@ export class Codegen {
     const respectiveCalls = this.toPatch.calls.get(symbol) ?? [];
     for (const respectiveCall of respectiveCalls)
       respectiveCall.address = address;
+  }
+
+  private pickType(node: ts.Node | ts.Type): ts.Type | undefined {
+    return "pos" in node && "end" in node ? this.getType(node) : node;
   }
 
   private visitExpression(node: ts.Expression): void {

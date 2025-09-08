@@ -34,7 +34,7 @@ export enum InstructionOp {
   NEW_ARRAY,
   ARRAY_PUSH,
   ARRAY_PUSHK,
-  ARRAY_LEN,
+  LEN,
 
   JMP,
   JZ,

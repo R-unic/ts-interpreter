@@ -12,6 +12,7 @@ function emitAccess(codegen: Codegen, node: ts.ElementAccessExpression): void {
   const objectInstruction = codegen.visit(node.expression);
   const indexInstruction = codegen.visit(node.argumentExpression);
   const objectRegister = codegen.getTargetRegister(objectInstruction);
+  const indexRegister = codegen.getTargetRegister(indexInstruction);
   const value = codegen.getConstantValue(node.argumentExpression);
   const isLoad = isLOADV(indexInstruction);
   if (value !== undefined || isLoad) {
@@ -23,11 +24,12 @@ function emitAccess(codegen: Codegen, node: ts.ElementAccessExpression): void {
       codegen.pushInstruction(INDEXN(register, objectRegister, indexValue.value as number));
     else
       codegen.pushInstruction(INDEXK(register, objectRegister, indexValue));
+  } else {
+    const register = codegen.allocRegister();
+    codegen.pushInstruction(INDEX(register, objectRegister, indexRegister));
   }
 
-  const register = codegen.allocRegister();
-  const indexRegister = codegen.getTargetRegister(indexInstruction);
-  codegen.pushInstruction(INDEX(register, objectRegister, indexRegister));
+  codegen.freeRegister(indexRegister);
 }
 
 export function visitElementAccessExpression(codegen: Codegen, node: ts.ElementAccessExpression): void {
