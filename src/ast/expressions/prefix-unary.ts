@@ -8,7 +8,7 @@ import type { Codegen } from "@/codegen";
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.PrefixUnaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.ExclamationToken]: InstructionOp.NOT,
   [ts.SyntaxKind.MinusToken]: InstructionOp.NEGATE,
-  // [ts.SyntaxKind.TildeToken]: InstructionOp.BNOT,
+  [ts.SyntaxKind.TildeToken]: InstructionOp.BNOT,
 };
 
 export function visitPrefixUnaryExpression(codegen: Codegen, node: ts.PrefixUnaryExpression): void {
