@@ -297,7 +297,7 @@ export class Codegen {
     if (isBinaryExpression(node)) {
       const left = this.getConstantValue(node.left);
       const right = this.getConstantValue(node.right);
-      if (left && right) {
+      if (left !== undefined && right !== undefined) {
         // TODO: constant folding
         if (typeof left === "number" && typeof right === "number") {
           switch (node.operatorToken.kind) {
@@ -319,12 +319,34 @@ export class Codegen {
               return left & right;
             case ts.SyntaxKind.BarToken:
               return left | right;
+            case ts.SyntaxKind.LessThanLessThanToken:
+              return left << right;
+            case ts.SyntaxKind.GreaterThanGreaterThanToken:
+              return left >> right;
+            case ts.SyntaxKind.GreaterThanGreaterThanGreaterThanToken:
+              return left >>> right;
           }
         }
       }
     }
     if (isPrefixUnaryExpression(node)) {
       // TODO: constant folding
+      const operand = this.getConstantValue(node.operand);
+      if (operand !== undefined) {
+        if (node.operator === ts.SyntaxKind.ExclamationToken)
+          return operand !== undefined && operand !== false;
+
+        if (typeof operand === "number") {
+          switch (node.operator) {
+            case ts.SyntaxKind.PlusToken:
+              return +operand;
+            case ts.SyntaxKind.MinusToken:
+              return -operand;
+            case ts.SyntaxKind.TildeToken:
+              return ~operand;
+          }
+        }
+      }
     }
 
     if (ts.isIdentifier(node)) {

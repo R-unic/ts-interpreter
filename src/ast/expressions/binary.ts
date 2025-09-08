@@ -1,11 +1,11 @@
 import ts, { isElementAccessExpression, isIdentifier } from "typescript";
 import assert from "assert";
 
-import { createStore, maybeGetSourceRegister } from "@/bytecode/utility";
+import { createStore, loadConstant } from "@/bytecode/utility";
 import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 import { InstructionOp } from "@/bytecode/structs";
 import { binaryInstruction } from "@/bytecode/instructions/binary";
-import { isLOADV } from "@/bytecode/instructions/loadv";
+import { isLOADV, LOADV } from "@/bytecode/instructions/loadv";
 import { STORE_INDEXN } from "@/bytecode/instructions/store-indexn";
 import { STORE_INDEXK } from "@/bytecode/instructions/store-indexk";
 import { STORE_INDEX } from "@/bytecode/instructions/store-index";
@@ -33,6 +33,10 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
 };
 
 export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpression): void {
+  const constantValue = codegen.getConstantValue(node);
+  if (constantValue !== undefined)
+    return loadConstant(codegen, constantValue);
+
   let rightRegister: number = -1;
   switch (node.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken: {

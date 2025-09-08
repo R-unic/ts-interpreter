@@ -28,6 +28,11 @@ export function createStore(codegen: Codegen, name: string, initializer?: ts.Exp
   return instruction(InstructionOp.STORE, { source, name });
 }
 
+export function loadConstant(codegen: Codegen, constantValue: string | number | boolean): void {
+  const register = codegen.allocRegister();
+  codegen.pushInstruction(LOADV(register, constantVmValue(constantValue)));
+}
+
 export function loadNull(register: number): Instruction {
   return LOADV(register, Null);
 }

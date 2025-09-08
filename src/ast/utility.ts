@@ -66,13 +66,6 @@ export function isElementOrPropertyAssignment(node: ts.ElementAccessExpression |
   return node.parent && isBinaryExpression(node.parent) && node.parent.operatorToken.kind === ts.SyntaxKind.EqualsToken;
 }
 
-export function pushEnumConstant(codegen: Codegen, constantValue: string | number): void {
-  const register = codegen.allocRegister();
-
-  codegen.pushInstruction(LOADV(register, constantVmValue(constantValue)));
-  return codegen.freeRegister(register);
-}
-
 /**
  * Generates code for a while loop. The condition is evaluated at the top of the loop,
  * and the loop body is executed if the condition evaluates to true. The afterBody

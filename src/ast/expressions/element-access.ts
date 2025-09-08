@@ -1,6 +1,7 @@
 import type ts from "typescript";
 
-import { isElementOrPropertyAssignment, pushEnumConstant } from "../utility";
+import { isElementOrPropertyAssignment } from "../utility";
+import { loadConstant } from "@/bytecode/utility";
 import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 import { INDEX } from "@/bytecode/instructions";
 import { INDEXN } from "@/bytecode/instructions/indexn";
@@ -35,7 +36,7 @@ function emitAccess(codegen: Codegen, node: ts.ElementAccessExpression): void {
 export function visitElementAccessExpression(codegen: Codegen, node: ts.ElementAccessExpression): void {
   const constantValue = codegen.getConstantValue(node);
   if (constantValue !== undefined)
-    return pushEnumConstant(codegen, constantValue as never);
+    return loadConstant(codegen, constantValue);
 
   if (isElementOrPropertyAssignment(node)) return;
   emitAccess(codegen, node);

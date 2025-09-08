@@ -1,8 +1,7 @@
 import ts, { isIdentifier } from "typescript";
 
 import { canInlineVariable } from "../utility";
-import { createStore, loadNull } from "@/bytecode/utility";
-import { STORE } from "@/bytecode/instructions/store";
+import { createStore } from "@/bytecode/utility";
 import type { Codegen } from "@/codegen";
 
 export function visitVariableDeclaration(codegen: Codegen, node: ts.VariableDeclaration): void {

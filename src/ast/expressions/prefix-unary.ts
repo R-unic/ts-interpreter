@@ -1,6 +1,7 @@
 import ts from "typescript";
 
 import { emitIncrementor } from "../utility";
+import { loadConstant } from "@/bytecode/utility";
 import { unaryInstruction } from "@/bytecode/instructions/unary";
 import { InstructionOp } from "@/bytecode/structs";
 import type { Codegen } from "@/codegen";
@@ -12,6 +13,10 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.PrefixUnaryOperator, InstructionOp>
 };
 
 export function visitPrefixUnaryExpression(codegen: Codegen, node: ts.PrefixUnaryExpression): void {
+  const constantValue = codegen.getConstantValue(node);
+  if (constantValue !== undefined)
+    return loadConstant(codegen, constantValue);
+
   switch (node.operator) {
     case ts.SyntaxKind.PlusToken:
       codegen.visit(node.operand);
