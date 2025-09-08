@@ -69,13 +69,15 @@ interface ToPatch {
   calls: Map<ts.Symbol, Set<Writable<InstructionCALL>>>;
   breaks: Set<Writable<InstructionJMP>>;
   continues: Set<Writable<InstructionJMP>>;
+  inlineReturns: Set<Writable<InstructionJMP>>;
 }
 
 export class Codegen {
   public readonly toPatch: ToPatch = {
     calls: new Map,
     breaks: new Set,
-    continues: new Set
+    continues: new Set,
+    inlineReturns: new Set,
   };
   public parameterValues = new Map<ts.Symbol, ts.Expression>;
 

@@ -30,9 +30,11 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
 
     codegen.visitList(fn.parameters);
     if (label.inlined && fn.body) {
-      const last = codegen.visitList(fn.body.statements);
-      if (last.op === InstructionOp.RETURN)
-        codegen.popInstruction(); // no returns for inlined functions
+      codegen.visitList(fn.body.statements);
+
+      const end = codegen.currentIndex();
+      for (const instruction of codegen.toPatch.inlineReturns)
+        instruction.address = end;
 
       return;
     }

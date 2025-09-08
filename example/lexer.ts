@@ -1,0 +1,28 @@
+const enum TokenType {
+  Plus,
+  Minus,
+  Star,
+  Slash
+}
+
+function lex(tokens: TokenType[], char: string): void {
+  let kind: TokenType | undefined;
+  if (char === '+')
+    kind = TokenType.Plus;
+  else if (char === '-')
+    kind = TokenType.Minus;
+  else if (char === '*')
+    kind = TokenType.Star;
+  else if (char === '/')
+    kind = TokenType.Slash;
+
+  if (!kind) {
+    console.log("Unexpected character: " + char);
+    return;
+  }
+
+  tokens.push(kind);
+}
+
+const tokens: TokenType[] = [];
+console.log(lex(tokens, "`"));
