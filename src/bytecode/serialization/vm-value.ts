@@ -2,10 +2,11 @@ import { writeVarInt } from "./utility";
 import { type VmValue, VmValueKind } from "../vm-value";
 
 export function serializeVmValue({ value, kind }: VmValue): { result: Buffer; bytesWritten: number; } {
-  let size = 8;
+  let size = 5;
   if (kind === VmValueKind.String) {
-    const { length } = value as string;
-    size += 4 + length;
+    const s = value as string;
+    const byteLen = Buffer.byteLength(s, "utf8");
+    size += 4 + byteLen;
   } else if (kind === VmValueKind.Float) {
     size += 4;
   }
@@ -23,9 +24,10 @@ export function serializeVmValue({ value, kind }: VmValue): { result: Buffer; by
     offset += 1;
   } else if (kind === VmValueKind.String) {
     const s = value as string;
-    const { length } = s;
-    offset += writeVarInt(buffer, offset, length);
-    offset += buffer.write(s, offset);
+    const byteLen = Buffer.byteLength(s, "utf8");
+    offset += writeVarInt(buffer, offset, byteLen);
+    buffer.write(s, offset, "utf8");
+    offset += byteLen
   } else if (kind === VmValueKind.DynamicArray) {
     const arr = value as unknown[];
     const { length } = arr;

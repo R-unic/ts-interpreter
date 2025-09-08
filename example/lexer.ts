@@ -25,4 +25,5 @@ function lex(tokens: TokenType[], char: string): void {
 }
 
 const tokens: TokenType[] = [];
-console.log(lex(tokens, "`"));
+lex(tokens, "`");
+console.log(tokens);

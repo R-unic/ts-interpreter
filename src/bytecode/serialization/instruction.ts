@@ -19,11 +19,31 @@ import { isSTORE_INDEXK } from "../instructions/store-indexk";
 import { isDELETE_INDEX } from "../instructions/delete-index";
 import { isDELETE_INDEXN } from "../instructions/delete-indexn";
 import { isDELETE_INDEXK } from "../instructions/delete-indexk";
+import { VmValueKind, type VmValue } from "../vm-value";
 import type { Instruction } from "../structs";
-import type { VmValue } from "../vm-value";
 
 export function serializeInstruction(instruction: Instruction): { result: Buffer; bytesWritten: number; } {
-  const buffer = Buffer.alloc(20);
+  let stringBytes = 0;
+  for (const value of Object.values(instruction)) {
+    let s: string | undefined;
+    if (typeof value === "string")
+      s = value
+    else if (
+      typeof value === "object"
+      && "kind" in value
+      && "value" in value
+      && value.kind === VmValueKind.String
+      && typeof value.value === "string"
+    ) {
+      s = value.value
+    }
+
+    if (s === undefined) continue;
+    stringBytes += Buffer.byteLength(s, "utf8");
+  }
+
+  // console.log(stringBytes)
+  const buffer = Buffer.alloc(20 + stringBytes);
   let offset = writeVarInt(buffer, 0, instruction.op);
 
   function writeVmValue(value: VmValue): void {
