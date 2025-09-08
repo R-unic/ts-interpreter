@@ -11,13 +11,16 @@ import { isJNZ } from "../instructions/jnz";
 import { isCALL } from "../instructions/call";
 import { isARRAY_PUSHK } from "../instructions/array-pushk";
 import { isINDEX } from "../instructions";
+import { isINDEXN } from "../instructions/indexn";
 import { isINDEXK } from "../instructions/indexk";
-import type { Instruction } from "../structs";
-import type { VmValue } from "../vm-value";
 import { isSTORE_INDEX } from "../instructions/store-index";
+import { isSTORE_INDEXN } from "../instructions/store-indexn";
 import { isSTORE_INDEXK } from "../instructions/store-indexk";
 import { isDELETE_INDEX } from "../instructions/delete-index";
+import { isDELETE_INDEXN } from "../instructions/delete-indexn";
 import { isDELETE_INDEXK } from "../instructions/delete-indexk";
+import type { Instruction } from "../structs";
+import type { VmValue } from "../vm-value";
 
 export function serializeInstruction(instruction: Instruction): { result: Buffer; bytesWritten: number; } {
   const buffer = Buffer.alloc(20);
@@ -48,14 +51,20 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     offset += writeVarInt(buffer, offset, instruction.address);
   } else if (
     isINDEX(instruction)
+    || isINDEXN(instruction)
     || isINDEXK(instruction)
     || isSTORE_INDEX(instruction)
+    || isSTORE_INDEXN(instruction)
     || isSTORE_INDEXK(instruction)
     || isDELETE_INDEX(instruction)
+    || isDELETE_INDEXN(instruction)
     || isDELETE_INDEXK(instruction)
   ) {
     offset += writeVarInt(buffer, offset, instruction.object);
-    offset += writeVarInt(buffer, offset, instruction.index);
+    if (typeof instruction.index === "number")
+      offset += writeVarInt(buffer, offset, instruction.index);
+    else
+      writeVmValue(instruction.index);
   }
 
   if ("operand" in instruction && typeof instruction.operand === "number")

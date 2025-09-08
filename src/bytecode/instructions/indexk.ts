@@ -1,14 +1,15 @@
 import { instruction } from "../utility";
 import { InstructionOp, type Instruction } from "../structs";
+import type { VmValue } from "../vm-value";
 
 export interface InstructionINDEXK extends Instruction {
   readonly op: InstructionOp.INDEXK;
   readonly target: number;
   readonly object: number;
-  readonly index: number;
+  readonly index: VmValue;
 }
 
-export function INDEXK(target: number, object: number, index: number): InstructionINDEXK {
+export function INDEXK(target: number, object: number, index: VmValue): InstructionINDEXK {
   return instruction(InstructionOp.INDEXK, { target, object, index });
 }
 

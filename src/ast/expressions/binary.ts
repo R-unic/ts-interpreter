@@ -1,14 +1,15 @@
-import ts, { isElementAccessExpression, isIdentifier, isPropertyAccessExpression } from "typescript";
+import ts, { isElementAccessExpression, isIdentifier } from "typescript";
 import assert from "assert";
 
+import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 import { InstructionOp } from "@/bytecode/structs";
 import { binaryInstruction } from "@/bytecode/instructions/binary";
 import { isLOADV } from "@/bytecode/instructions/loadv";
 import { STORE } from "@/bytecode/instructions/store";
+import { STORE_INDEXN } from "@/bytecode/instructions/store-indexn";
+import { STORE_INDEXK } from "@/bytecode/instructions/store-indexk";
 import { STORE_INDEX } from "@/bytecode/instructions/store-index";
 import type { Codegen } from "@/codegen";
-import { STORE_INDEXK } from "@/bytecode/instructions/store-indexk";
-import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.PlusToken]: InstructionOp.ADD,
@@ -29,7 +30,7 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
 };
 
 export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpression): void {
-  let rightRegister: number = -1;
+  let rightRegister: number;
   switch (node.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken: {
       // TODO: prop access assignment
@@ -43,14 +44,14 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
 
         if (value !== undefined || isLoad) {
           const indexValue = isLoad ? indexInstruction.value : constantVmValue(value!);
-          if (indexValue.kind === VmValueKind.Int) {
-            codegen.undoLastAddition();
+          codegen.undoLastAddition();
 
-            const right = codegen.visit(node.right);
-            rightRegister = codegen.getTargetRegister(right);
-            assert(typeof indexValue.value === "number", "STORE_INDEXK value is not a number");
-            codegen.pushInstruction(STORE_INDEXK(rightRegister, objectRegister, indexValue.value as number));
-          }
+          const right = codegen.visit(node.right);
+          rightRegister = codegen.getTargetRegister(right);
+          if (indexValue.kind === VmValueKind.Int)
+            codegen.pushInstruction(STORE_INDEXN(rightRegister, objectRegister, indexValue.value as number));
+          else
+            codegen.pushInstruction(STORE_INDEXK(rightRegister, objectRegister, indexValue));
         } else {
           const indexRegister = codegen.getTargetRegister(indexInstruction);
           const right = codegen.visit(node.right);

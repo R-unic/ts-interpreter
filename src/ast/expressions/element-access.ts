@@ -1,9 +1,9 @@
 import type ts from "typescript";
-import assert from "assert";
 
 import { isElementOrPropertyAssignment, pushEnumConstant } from "../utility";
 import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 import { INDEX } from "@/bytecode/instructions";
+import { INDEXN } from "@/bytecode/instructions/indexn";
 import { INDEXK } from "@/bytecode/instructions/indexk";
 import { isLOADV } from "@/bytecode/instructions/loadv";
 import type { Codegen } from "@/codegen";
@@ -16,12 +16,13 @@ function emitAccess(codegen: Codegen, node: ts.ElementAccessExpression): void {
   const isLoad = isLOADV(indexInstruction);
   if (value !== undefined || isLoad) {
     const indexValue = isLoad ? indexInstruction.value : constantVmValue(value!);
-    if (indexValue.kind === VmValueKind.Int) {
-      const register = isLoad ? indexInstruction.target : codegen.allocRegister();
-      codegen.undoLastAddition();
-      assert(typeof indexValue.value === "number", "INDEXK value is not a number");
-      return void codegen.pushInstruction(INDEXK(register, objectRegister, indexValue.value as number));
-    }
+    const register = isLoad ? indexInstruction.target : codegen.allocRegister();
+    codegen.undoLastAddition();
+
+    if (indexValue.kind === VmValueKind.Int)
+      codegen.pushInstruction(INDEXN(register, objectRegister, indexValue.value as number));
+    else
+      codegen.pushInstruction(INDEXK(register, objectRegister, indexValue));
   }
 
   const register = codegen.allocRegister();

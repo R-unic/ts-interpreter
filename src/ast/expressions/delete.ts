@@ -2,12 +2,13 @@ import ts, { isPropertyAccessExpression } from "typescript";
 import assert from "assert";
 
 import { getPropertyAccessMacro } from "../macros/property-access";
-import { constantVmValue } from "@/bytecode/vm-value";
+import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 import { DELETE_INDEX } from "@/bytecode/instructions/delete-index";
-import { DELETE_INDEXK } from "@/bytecode/instructions/delete-indexk";
+import { DELETE_INDEXN } from "@/bytecode/instructions/delete-indexn";
 import { type InstructionLOADV, isLOADV } from "@/bytecode/instructions/loadv";
 import type { Instruction } from "@/bytecode/structs";
 import type { Codegen } from "@/codegen";
+import { DELETE_INDEXK } from "@/bytecode/instructions/delete-indexk";
 
 export function visitDeleteExpression(codegen: Codegen, node: ts.DeleteExpression): void {
   const access = node.expression as ts.AccessExpression;
@@ -31,9 +32,11 @@ export function visitDeleteExpression(codegen: Codegen, node: ts.DeleteExpressio
   const isLoad = isLOADV(indexInstruction);
   if (constantValue !== undefined || isLoad) {
     const indexValue = isLoad ? (indexInstruction as InstructionLOADV).value : constantVmValue(constantValue!);
-    assert(typeof indexValue.value === "number", "DELETE_INDEXK value is not a number");
     codegen.undoLastAddition();
-    codegen.pushInstruction(DELETE_INDEXK(objectRegister, constantValue as number));
+    if (indexValue.kind === VmValueKind.Int)
+      codegen.pushInstruction(DELETE_INDEXN(objectRegister, indexValue.value as number));
+    else
+      codegen.pushInstruction(DELETE_INDEXK(objectRegister, indexValue));
   } else {
     const indexRegister = codegen.getTargetRegister(indexInstruction);
     codegen.pushInstruction(DELETE_INDEX(objectRegister, indexRegister));

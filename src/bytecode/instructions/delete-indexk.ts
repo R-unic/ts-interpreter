@@ -1,13 +1,14 @@
 import { instruction } from "../utility";
 import { InstructionOp, type Instruction } from "../structs";
+import type { VmValue } from "../vm-value";
 
 export interface InstructionDELETE_INDEXK extends Instruction {
   readonly op: InstructionOp.DELETE_INDEXK;
   readonly object: number;
-  readonly index: number;
+  readonly index: VmValue;
 }
 
-export function DELETE_INDEXK(object: number, index: number): InstructionDELETE_INDEXK {
+export function DELETE_INDEXK(object: number, index: VmValue): InstructionDELETE_INDEXK {
   return instruction(InstructionOp.DELETE_INDEXK, { object, index });
 }
 
