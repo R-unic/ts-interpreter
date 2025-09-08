@@ -55,6 +55,7 @@ export enum InstructionOp {
   RETURN,
 
   PRINT,
+  PRINTK,
   HALT
 }
 

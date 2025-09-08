@@ -6,6 +6,7 @@ import { PRINT } from "@/bytecode/instructions/print";
 import { ARRAY_PUSHK } from "@/bytecode/instructions/array-pushk";
 import { ARRAY_PUSH } from "@/bytecode/instructions/array-push";
 import type { Codegen } from "@/codegen";
+import { PRINTK } from "@/bytecode/instructions/printk";
 
 function isStaticPropertyCall(node: ts.CallExpression, leftName: string, rightName: string): boolean {
   const callee = node.expression;
@@ -31,10 +32,18 @@ function isMethodCall(
 export function getCallMacro(node: ts.CallExpression, codegen: Codegen): (() => void) | undefined {
   if (isStaticPropertyCall(node, "console", "log")) {
     return () => {
-      const instruction = codegen.visit(node.arguments[0]!);
-      const register = codegen.getTargetRegister(instruction);
-      codegen.pushInstruction(PRINT(register));
-      codegen.freeRegister(register);
+      const item = node.arguments[0]!;
+      const instruction = codegen.visit(item);
+      const constantValue = codegen.getConstantValue(item);
+      const isLoad = isLOADV(instruction);
+      if (constantValue !== undefined || isLoad) {
+        codegen.undoLastAddition();
+        codegen.pushInstruction(PRINTK(isLoad ? instruction.value : constantVmValue(constantValue!)));
+      } else {
+        const register = codegen.getTargetRegister(instruction);
+        codegen.pushInstruction(PRINT(register));
+        codegen.freeRegister(register);
+      }
     };
   } else if (isMethodCall(node, node => codegen.isArrayLikeType(node), "push")) {
     return () => {

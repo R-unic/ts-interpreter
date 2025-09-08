@@ -19,11 +19,12 @@ import { isSTORE_INDEXK } from "../instructions/store-indexk";
 import { isDELETE_INDEX } from "../instructions/delete-index";
 import { isDELETE_INDEXN } from "../instructions/delete-indexn";
 import { isDELETE_INDEXK } from "../instructions/delete-indexk";
-import { VmValueKind, type VmValue } from "../vm-value";
-import type { Instruction } from "../structs";
 import { isINC } from "../instructions/inc";
 import { isDEC } from "../instructions/dec";
 import { isSTOREK } from "../instructions/storek";
+import { isPRINTK } from "../instructions/printk";
+import { VmValueKind, type VmValue } from "../vm-value";
+import type { Instruction } from "../structs";
 
 function getBytesOccupiedByStrings(instruction: Instruction): number {
   let stringBytes = 0;
@@ -79,7 +80,7 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
   if (isBinary(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.a);
     offset += writeVarInt(buffer, offset, instruction.b);
-  } else if (isLOADV(instruction) || isARRAY_PUSHK(instruction))
+  } else if (isLOADV(instruction) || isARRAY_PUSHK(instruction) || isPRINTK(instruction))
     writeVmValue(instruction.value);
   else if (isSTORE(instruction) || isSTOREK(instruction) || isLOAD(instruction) || isIncrementor) {
     offset += writeVarInt(buffer, offset, instruction.name.length);
