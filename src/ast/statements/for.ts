@@ -1,8 +1,8 @@
 import ts, { isVariableDeclarationList } from "typescript";
 
+import { Null } from "@/bytecode/vm-value";
 import { whileLoop } from "../utility";
-import { loadNull } from "@/bytecode/utility";
-import { STORE } from "@/bytecode/instructions/store";
+import { STOREK } from "@/bytecode/instructions/storek";
 import type { Codegen } from "@/codegen";
 
 const TRUE = ts.factory.createTrue();
@@ -17,10 +17,6 @@ export function visitForStatement(codegen: Codegen, node: ts.ForStatement): void
 
   whileLoop(codegen, node.condition ?? TRUE, node.statement, node.incrementor);
 
-  const register = codegen.allocRegister();
-  codegen.pushInstruction(loadNull(register));
   for (const declaration of declarations)
-    codegen.pushInstruction(STORE(register, (declaration.name as ts.Identifier).text));
-
-  codegen.freeRegister(register);
+    codegen.pushInstruction(STOREK((declaration.name as ts.Identifier).text, Null));
 }

@@ -1,11 +1,35 @@
+import type ts from "typescript";
 import { inspect, type InspectOptions } from "util";
 
-import { vmValue, VmValueKind } from "./vm-value";
-import { LOADV } from "./instructions/loadv";
+import { constantVmValue, Null } from "./vm-value";
+import { isLOADV, LOADV } from "./instructions/loadv";
 import { InstructionOp, type Bytecode, type Instruction } from "./structs";
+import type { InstructionSTORE } from "./instructions/store";
+import type { InstructionSTOREK } from "./instructions/storek";
+import type { Codegen } from "@/codegen";
+
+export function createStore(codegen: Codegen, name: string, initializer?: ts.Expression): InstructionSTORE | InstructionSTOREK {
+  if (!initializer)
+    return instruction(InstructionOp.STOREK, { name, value: Null });
+
+  const initializerInstruction = codegen.visit(initializer);
+  const constantValue = codegen.getConstantValue(initializer);
+  const isLoad = isLOADV(initializerInstruction);
+  if (constantValue !== undefined || isLoad) {
+    const value = isLoad ? initializerInstruction.value : constantVmValue(constantValue!);
+    codegen.undoLastAddition();
+
+    return instruction(InstructionOp.STOREK, { name, value });
+  }
+
+  const source = codegen.getTargetRegister(initializerInstruction);
+  codegen.freeRegister(source); // TODO: more guidelines for freeing
+
+  return instruction(InstructionOp.STORE, { source, name });
+}
 
 export function loadNull(register: number): Instruction {
-  return LOADV(register, vmValue(VmValueKind.Null, undefined));
+  return LOADV(register, Null);
 }
 
 export const INSPECT_OPTIONS: InspectOptions = {

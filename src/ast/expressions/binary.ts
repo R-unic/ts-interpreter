@@ -1,11 +1,11 @@
 import ts, { isElementAccessExpression, isIdentifier } from "typescript";
 import assert from "assert";
 
+import { createStore, maybeGetSourceRegister } from "@/bytecode/utility";
 import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 import { InstructionOp } from "@/bytecode/structs";
 import { binaryInstruction } from "@/bytecode/instructions/binary";
 import { isLOADV } from "@/bytecode/instructions/loadv";
-import { STORE } from "@/bytecode/instructions/store";
 import { STORE_INDEXN } from "@/bytecode/instructions/store-indexn";
 import { STORE_INDEXK } from "@/bytecode/instructions/store-indexk";
 import { STORE_INDEX } from "@/bytecode/instructions/store-index";
@@ -30,7 +30,7 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
 };
 
 export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpression): void {
-  let rightRegister: number;
+  let rightRegister: number = -1;
   switch (node.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken: {
       // TODO: prop access assignment
@@ -65,9 +65,7 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
       }
 
       assert(isIdentifier(node.left), "Binding patterns not yet supported");
-      const right = codegen.visit(node.right);
-      rightRegister = codegen.getTargetRegister(right);
-      codegen.pushInstruction(STORE(rightRegister, node.left.text));
+      codegen.pushInstruction(createStore(codegen, node.left.text, node.right));
       break;
     }
 

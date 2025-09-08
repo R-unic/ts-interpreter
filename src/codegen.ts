@@ -176,6 +176,8 @@ export class Codegen {
   }
 
   public freeRegister(register: number): void {
+    if (register < 0) return;
+
     this.allocatedRegisters.delete(register);
     if (this.closestFreeRegister > register)
       this.closestFreeRegister = register;

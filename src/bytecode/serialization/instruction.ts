@@ -23,6 +23,7 @@ import { VmValueKind, type VmValue } from "../vm-value";
 import type { Instruction } from "../structs";
 import { isINC } from "../instructions/inc";
 import { isDEC } from "../instructions/dec";
+import { isSTOREK } from "../instructions/storek";
 
 function getBytesOccupiedByStrings(instruction: Instruction): number {
   let stringBytes = 0;
@@ -80,12 +81,14 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     offset += writeVarInt(buffer, offset, instruction.b);
   } else if (isLOADV(instruction) || isARRAY_PUSHK(instruction))
     writeVmValue(instruction.value);
-  else if (isSTORE(instruction) || isLOAD(instruction) || isIncrementor) {
+  else if (isSTORE(instruction) || isSTOREK(instruction) || isLOAD(instruction) || isIncrementor) {
     offset += writeVarInt(buffer, offset, instruction.name.length);
     offset += buffer.write(instruction.name, offset);
     if (isIncrementor) {
       buffer.writeUInt8(instruction.returnsOld ? 1 : 0, offset);
       offset += 1;
+    } else if (isSTOREK(instruction)) {
+      writeVmValue(instruction.value);
     }
   } else if (isJMP(instruction) || isJZ(instruction) || isJNZ(instruction) || isCALL(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.address);

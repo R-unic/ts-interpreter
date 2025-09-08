@@ -26,6 +26,8 @@ export interface VmValue<T extends VmValueKind = VmValueKind> {
   [inspect.custom](): string;
 }
 
+export const Null = vmValue(VmValueKind.Null, undefined);
+
 export function vmValue<T extends VmValueKind>(kind: T, value: VmValueTypes[T]): VmValue<T> {
   return {
     kind, value,
