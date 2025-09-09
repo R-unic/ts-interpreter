@@ -24,12 +24,13 @@ function lex(tokens: TokenType[], char: string): void {
   tokens.push(kind);
 }
 
-function tokenize(source: string): readonly TokenType[] {
-  const tokens: TokenType[] = [];
-  for (let i = 0; i < source.length; i = i + 1)
-    lex(tokens, source[i]);
+lex([], '-');
+// function tokenize(source: string): readonly TokenType[] {
+//   const tokens: TokenType[] = [];
+//   for (let i = 0; i < source.length; i = i + 1)
+//     lex(tokens, source[i]);
 
-  return tokens;
-}
+//   return tokens;
+// }
 
-console.log(tokenize("+-*/"));
+// console.log(tokenize("+-*/"));

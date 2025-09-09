@@ -47,6 +47,7 @@ export function getCallMacro(node: ts.CallExpression, codegen: Codegen): (() => 
       }
     };
   } else if (isMethodCall(node, node => codegen.isArrayLikeType(node), "push")) {
+    // TODO: load the index it was pushed to if return value was used
     return () => {
       const callee = node.expression;
       const arrayInstruction = codegen.visit(callee.expression);

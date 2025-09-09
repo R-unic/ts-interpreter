@@ -9,20 +9,20 @@ import type { InstructionSTOREK } from "./instructions/storek";
 import type { Codegen } from "@/codegen";
 
 export function createStore(codegen: Codegen, name: string, initializer?: ts.Expression): InstructionSTORE | InstructionSTOREK {
-  if (!initializer)
+  if (initializer === undefined)
     return instruction(InstructionOp.STOREK, { name, value: Null });
 
-  const initializerInstruction = codegen.visit(initializer);
+  const valueInstruction = codegen.visit(initializer);
   const constantValue = codegen.getConstantValue(initializer);
-  const isLoad = isLOADV(initializerInstruction);
+  const isLoad = isLOADV(valueInstruction);
   if (constantValue !== undefined || isLoad) {
-    const value = isLoad ? initializerInstruction.value : constantVmValue(constantValue!);
+    const value = isLoad ? valueInstruction.value : constantVmValue(constantValue!);
     codegen.undoLastAddition();
 
     return instruction(InstructionOp.STOREK, { name, value });
   }
 
-  const source = codegen.getTargetRegister(initializerInstruction);
+  const source = codegen.getTargetRegister(valueInstruction);
   codegen.freeRegister(source); // TODO: more guidelines for freeing
 
   return instruction(InstructionOp.STORE, { source, name });

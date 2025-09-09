@@ -24,7 +24,8 @@ import ts, {
   isArrayLiteralExpression,
   isDeleteExpression,
   isPrefixUnaryExpression,
-  isPostfixUnaryExpression
+  isPostfixUnaryExpression,
+  isObjectLiteralExpression
 } from "typescript";
 import assert from "assert";
 
@@ -60,6 +61,7 @@ import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
 import { visitPrefixUnaryExpression } from "./ast/expressions/prefix-unary";
 import { visitPostfixUnaryExpression } from "./ast/expressions/postfix-unary";
+import { visitObjectLiteralExpression } from "./ast/expressions/object-literal";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -123,7 +125,11 @@ export class Codegen {
       // console.warn("Unhandled non-statement and non-expression: " + ts.SyntaxKind[node.kind]);
       this.visitChildren(node);
 
-    return this.lastInstruction();
+    const instruction = this.lastInstruction<T>();
+    if (instruction === undefined)
+      throw new Error("No instruction emitted -- cannot return");
+
+    return instruction;
   }
 
   public visitList<T extends ts.Node>(nodes: T[] | ts.NodeArray<T>): Instruction {
@@ -299,6 +305,15 @@ export class Codegen {
       const right = this.getConstantValue(node.right);
       if (left !== undefined && right !== undefined) {
         // TODO: constant folding
+        if (node.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken)
+          return left === right;
+        else if (node.operatorToken.kind === ts.SyntaxKind.ExclamationEqualsEqualsToken)
+          return left !== right;
+        else if (node.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken)
+          return (left !== undefined && left !== false) && (right !== undefined && right !== false);
+        else if (node.operatorToken.kind === ts.SyntaxKind.BarBarToken)
+          return (left !== undefined && left !== false) || (right !== undefined && right !== false);
+
         if (typeof left === "number" && typeof right === "number") {
           switch (node.operatorToken.kind) {
             case ts.SyntaxKind.PlusToken:
@@ -442,6 +457,8 @@ export class Codegen {
       visitStringLiteral(this, node);
     else if (isArrayLiteralExpression(node))
       visitArrayLiteralExpression(this, node);
+    else if (isObjectLiteralExpression(node))
+      visitObjectLiteralExpression(this, node);
     else if (node.kind === ts.SyntaxKind.TrueKeyword)
       visitTrueLiteral(this, node as never);
     else if (node.kind === ts.SyntaxKind.FalseKeyword)

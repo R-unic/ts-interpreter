@@ -1,4 +1,2 @@
-const arr: number[] = [];
-arr.push(69, 420);
-arr[2] = 1337;
+const arr: number[] = [69, 420];
 console.log(arr);

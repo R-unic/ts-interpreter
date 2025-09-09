@@ -7,6 +7,7 @@ export enum VmValueKind {
   String,
   Boolean,
   DynamicArray,
+  Object,
   Null
 }
 
@@ -15,7 +16,8 @@ interface VmValueTypes {
   [VmValueKind.Int]: number;
   [VmValueKind.String]: string;
   [VmValueKind.Boolean]: boolean;
-  [VmValueKind.DynamicArray]: unknown[];
+  [VmValueKind.DynamicArray]: VmValue[];
+  [VmValueKind.Object]: Map<VmValue, VmValue>;
   [VmValueKind.Null]: undefined;
 }
 

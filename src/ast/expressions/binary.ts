@@ -1,4 +1,4 @@
-import ts, { isElementAccessExpression, isIdentifier } from "typescript";
+import ts, { isElementAccessExpression, isIdentifier, isPrivateIdentifier, isPropertyAccessExpression } from "typescript";
 import assert from "assert";
 
 import { createStore, loadConstant } from "@/bytecode/utility";
@@ -69,9 +69,19 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
 
         codegen.freeRegister(objectRegister);
         break;
+      } else if (isPropertyAccessExpression(node.left)) {
+        const objectInstruction = codegen.visit(node.left.expression);
+        const objectRegister = codegen.getTargetRegister(objectInstruction);
+        assert(isIdentifier(node.left.name) || isPrivateIdentifier(node.left.name), "Binding patterns not yet supported");
+
+        const right = codegen.visit(node.right);
+        rightRegister = codegen.getTargetRegister(right);
+        codegen.pushInstruction(STORE_INDEXK(rightRegister, objectRegister, constantVmValue(node.left.name.text)));
+        codegen.freeRegister(objectRegister);
+        break;
       }
 
-      assert(isIdentifier(node.left), "Binding patterns not yet supported");
+      assert(isIdentifier(node.left) || isPrivateIdentifier(node.left), "Binding patterns not yet supported");
       codegen.pushInstruction(createStore(codegen, node.left.text, node.right));
       break;
     }

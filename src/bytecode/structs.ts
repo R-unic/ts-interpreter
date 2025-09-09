@@ -39,6 +39,7 @@ export enum InstructionOp {
   DELETE_INDEX,
   DELETE_INDEXN,
   DELETE_INDEXK,
+  NEW_OBJECT,
   NEW_ARRAY,
   ARRAY_PUSH,
   ARRAY_PUSHK,
