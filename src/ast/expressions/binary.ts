@@ -117,11 +117,12 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
         codegen.undoLastAddition();
 
         const right = codegen.visit(node.right);
-        rightRegister = codegen.getTargetRegister(right);
-        codegen.pushInstruction(constantBinaryInstruction(constOp, rightRegister, value, rightRegister));
+        const register = codegen.getTargetRegister(right);
+        codegen.pushInstruction(constantBinaryInstruction(constOp, register, value, register));
         break;
       }
 
+      const leftRegister = codegen.getTargetRegister(left);
       const right = codegen.visit(node.right);
       const rightConstant = codegen.getConstantValue(node.right);
       const isRightLoad = isLOADV(right);
@@ -132,13 +133,13 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
         && (rightConstant !== undefined || isRightLoad)
       ) {
         const value = isRightLoad ? right.value : constantVmValue(rightConstant!);
-        const register = codegen.getTargetRegister(right);
         codegen.undoLastAddition();
-        codegen.pushInstruction(constantBinaryInstruction(constOp, register, value, register));
+
+        const register = codegen.getTargetRegister(right);
+        codegen.pushInstruction(constantBinaryInstruction(constOp, register, value, leftRegister));
         break;
       }
 
-      const leftRegister = codegen.getTargetRegister(left);
       rightRegister = codegen.getTargetRegister(right);
       codegen.pushInstruction(binaryInstruction(op, leftRegister, leftRegister, rightRegister));
       codegen.freeRegister(rightRegister);

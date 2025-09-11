@@ -27,7 +27,7 @@ const ONE_CHARACTER_TOKENS: Record<string, TokenKind> = {
 function tokenize(source: string): readonly Token[] {
   const sourceLength = source.length;
   const state: LexState = { sourceLength, source, tokens: [], position: 0 };
-  while (!isEOF(state))
+  while (state.position < state.sourceLength)
     lex(state, currentCharacter(state));
 
   return state.tokens;
@@ -54,10 +54,6 @@ function advance(state: LexState, amount = 1): void {
 
 function currentCharacter(state: LexState): string {
   return state.source[state.position];
-}
-
-function isEOF(state: LexState): boolean {
-  return state.position >= state.sourceLength;
 }
 
 console.log(tokenize("+-*/"));
