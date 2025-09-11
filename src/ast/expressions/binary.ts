@@ -10,6 +10,7 @@ import { STORE_INDEXN } from "@/bytecode/instructions/store-indexn";
 import { STORE_INDEXK } from "@/bytecode/instructions/store-indexk";
 import { STORE_INDEX } from "@/bytecode/instructions/store-index";
 import type { Codegen } from "@/codegen";
+import { constantBinaryInstruction } from "@/bytecode/instructions/constant-binary";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.PlusToken]: InstructionOp.ADD,
@@ -30,6 +31,20 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.GreaterThanEqualsToken]: InstructionOp.GTE,
   [ts.SyntaxKind.EqualsEqualsEqualsToken]: InstructionOp.EQ,
   [ts.SyntaxKind.ExclamationEqualsEqualsToken]: InstructionOp.NEQ,
+};
+const CONST_OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
+  [ts.SyntaxKind.PlusToken]: InstructionOp.ADDK,
+  [ts.SyntaxKind.MinusToken]: InstructionOp.SUBK,
+  [ts.SyntaxKind.AsteriskToken]: InstructionOp.MULK,
+  [ts.SyntaxKind.SlashToken]: InstructionOp.DIVK,
+  [ts.SyntaxKind.PercentToken]: InstructionOp.MODK,
+  [ts.SyntaxKind.AsteriskAsteriskToken]: InstructionOp.POWK,
+  [ts.SyntaxKind.CaretToken]: InstructionOp.BXORK,
+  [ts.SyntaxKind.AmpersandToken]: InstructionOp.BANDK,
+  [ts.SyntaxKind.BarToken]: InstructionOp.BORK,
+  [ts.SyntaxKind.LessThanLessThanToken]: InstructionOp.BLSHK,
+  [ts.SyntaxKind.GreaterThanGreaterThanGreaterThanToken]: InstructionOp.BRSHK,
+  [ts.SyntaxKind.GreaterThanGreaterThanToken]: InstructionOp.BARSHK
 };
 
 export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpression): void {
@@ -85,14 +100,41 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
     }
 
     default: {
-      const op = OPERATOR_OPCODE_MAP[node.operatorToken.kind];
+      const operatorKind = node.operatorToken.kind;
+      const op = OPERATOR_OPCODE_MAP[operatorKind];
       if (op === undefined)
-        throw new Error(`Unsupported binary operator ${ts.SyntaxKind[node.operatorToken.kind]}`);
+        throw new Error(`Unsupported binary operator ${ts.SyntaxKind[operatorKind]}`);
 
+      const constOp = CONST_OPERATOR_OPCODE_MAP[operatorKind];
       // replace the left register's value with the result
       const left = codegen.visit(node.left);
-      const leftRegister = codegen.getTargetRegister(left);
+      const leftConstant = codegen.getConstantValue(node.left);
+      const isLeftLoad = isLOADV(left);
+      if (constOp !== undefined && (leftConstant !== undefined || isLeftLoad)) {
+        const value = isLeftLoad ? left.value : constantVmValue(leftConstant!);
+        const register = codegen.getTargetRegister(left);
+        codegen.freeRegister(register);
+        codegen.undoLastAddition();
+
+        const right = codegen.visit(node.right);
+        rightRegister = codegen.getTargetRegister(right);
+        codegen.pushInstruction(constantBinaryInstruction(constOp, rightRegister, value, rightRegister));
+        break;
+      }
+
       const right = codegen.visit(node.right);
+      const rightConstant = codegen.getConstantValue(node.right);
+      const isRightLoad = isLOADV(right);
+      if (constOp === InstructionOp.ADDK && (rightConstant !== undefined || isRightLoad)) {
+        const value = isRightLoad ? right.value : constantVmValue(rightConstant!);
+        const register = codegen.getTargetRegister(right);
+        codegen.freeRegister(register);
+        codegen.undoLastAddition();
+        codegen.pushInstruction(constantBinaryInstruction(constOp, register, value, register));
+        break;
+      }
+
+      const leftRegister = codegen.getTargetRegister(left);
       rightRegister = codegen.getTargetRegister(right);
       codegen.pushInstruction(binaryInstruction(op, leftRegister, leftRegister, rightRegister));
       break;

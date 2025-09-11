@@ -1,5 +1,6 @@
 import type { InstructionJNZ } from "./instructions/jnz";
 import type { InstructionJZ } from "./instructions/jz";
+import type { VmValue } from "./vm-value";
 
 export type Bytecode = readonly Instruction[];
 export enum InstructionOp {
@@ -106,6 +107,13 @@ export interface BinaryJumpInstruction<T extends InstructionOp = InstructionOp> 
   readonly a: number;
   readonly b: number;
   readonly address: number;
+}
+
+export interface ConstantBinaryInstruction<T extends InstructionOp = InstructionOp> extends Instruction {
+  readonly op: T;
+  readonly target: number;
+  readonly aValue: VmValue;
+  readonly b: number;
 }
 
 export interface UnaryInstruction<T extends InstructionOp = InstructionOp> extends Instruction {
