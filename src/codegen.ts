@@ -75,7 +75,8 @@ interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
   readonly inlined: boolean;
   readonly symbol: ts.Symbol;
-  readonly inlineReturns: Map<Writable<InstructionJMP>, number>;
+  readonly inlineReturns: Set<Writable<InstructionJMP>>;
+  readonly returnRegisters: number[];
 }
 
 interface ToPatch {
@@ -140,9 +141,11 @@ export class Codegen {
   }
 
   public visitList<T extends ts.Node>(nodes: T[] | ts.NodeArray<T>): Instruction {
+    const current = [...this.emitResult];
     for (const node of nodes)
       this.visit(node);
 
+    this.previousEmitResult = current;
     return this.lastInstruction();
   }
 
@@ -269,11 +272,13 @@ export class Codegen {
     return Math.max(this.closestFreeRegister - 1, 0);
   }
 
-  public registerScope(callback: () => void): void {
+  public registerScope<T extends Instruction>(callback: () => T | void): T {
     const enclosing = this.closestFreeRegister;
     this.closestFreeRegister = 0;
-    callback();
+    const instruction = callback();
     this.closestFreeRegister = enclosing;
+
+    return instruction ?? this.lastInstruction();
   }
 
   public addCallToPatch(symbol: ts.Symbol, instruction: InstructionCALL): void {
@@ -300,10 +305,11 @@ export class Codegen {
       throw new Error(`Could not find symbol for function:\n${node.getText()}\n`);
 
     this.functions.set(symbol, {
+      symbol,
       declaration: node,
       inlined: canInlineFunction(node, this),
-      inlineReturns: new Map,
-      symbol,
+      inlineReturns: new Set,
+      returnRegisters: []
     });
   }
 
@@ -510,7 +516,7 @@ export class Codegen {
       if (inlined) continue;
 
       const start = pc;
-      const last = this.visitList(declaration.body.statements);
+      const last = this.registerScope(() => this.visitList(declaration.body!.statements))
       this.backpatchCallAddresses(symbol, start);
       if (last.op !== InstructionOp.RETURN)
         this.emitResult.push(RETURN);

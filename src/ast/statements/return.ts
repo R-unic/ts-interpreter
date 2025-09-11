@@ -26,13 +26,18 @@ export function visitReturnStatement(codegen: Codegen, node: ts.ReturnStatement)
     codegen.pushInstruction(loadNull(register));
   }
 
-  codegen.freeRegister(register);
   const label = codegen.getFunctionLabel(symbol);
-  if (label && label.inlined) {
-    const returnJump = JMP(-1);
-    label.inlineReturns.set(returnJump, register);
-    return void codegen.pushInstruction(returnJump);
-  }
+  if (!label)
+    throw new Error("No function label found to return from");
 
-  codegen.pushInstruction(RETURN);
+  if (label.inlined) {
+    const returnJump = JMP(-1);
+    label.inlineReturns.add(returnJump);
+    codegen.freeRegister(register);
+    codegen.closestFreeRegister = register;
+    codegen.pushInstruction(returnJump);
+  } else {
+    label.returnRegisters.push(register);
+    codegen.pushInstruction(RETURN);
+  }
 }
