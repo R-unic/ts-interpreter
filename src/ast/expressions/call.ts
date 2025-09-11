@@ -1,8 +1,7 @@
-import ts from "typescript";
+import ts, { isIdentifier } from "typescript";
 import assert from "assert";
 
 import { getCallMacro } from "../macros/call";
-import { InstructionOp } from "@/bytecode/structs";
 import { CALL } from "@/bytecode/instructions/call";
 import type { Codegen } from "@/codegen";
 
@@ -19,8 +18,9 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
     const fn = label.declaration;
     let i = 0;
     for (const parameter of fn.parameters) {
+      assert(isIdentifier(parameter.name), "Binding patterns not yet supported");
       const symbol = codegen.getSymbol(parameter.name);
-      assert(symbol, "no parameter symbol");
+      assert(symbol, "No parameter symbol");
 
       const value = node.arguments[i++] ?? parameter.initializer;
       if (value === undefined) return;

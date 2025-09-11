@@ -41,7 +41,13 @@ function generateBytecode(): GenerationResult {
     options: {
       strict: true,
       noEmit: true,
-      preserveConstEnums: true
+      preserveConstEnums: true,
+      skipLibCheck: true,
+      target: ts.ScriptTarget.ESNext,
+      module: ts.ModuleKind.ESNext,
+      moduleResolution: ts.ModuleResolutionKind.Bundler,
+      allowJs: false,
+      checkJs: false
     }
   });
 

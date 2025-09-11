@@ -1,36 +1,47 @@
-const enum TokenType {
+const enum TokenKind {
   Plus,
   Minus,
   Star,
   Slash
 }
 
-function lex(tokens: TokenType[], char: string): void {
-  let kind: TokenType | undefined;
+interface Token {
+  readonly kind: TokenKind;
+  readonly text: string;
+}
+
+interface LexState {
+  readonly tokens: Token[];
+}
+
+function lex(state: LexState, char: string): void {
+  let kind: TokenKind | undefined;
   if (char === '+')
-    kind = TokenType.Plus;
+    kind = TokenKind.Plus;
   else if (char === '-')
-    kind = TokenType.Minus;
+    kind = TokenKind.Minus;
   else if (char === '*')
-    kind = TokenType.Star;
+    kind = TokenKind.Star;
   else if (char === '/')
-    kind = TokenType.Slash;
+    kind = TokenKind.Slash;
 
   if (!kind) {
     console.log("Unexpected character: '" + char + "'");
     return;
   }
 
-  tokens.push(kind);
+  state.tokens.push({
+    kind,
+    text: char // for now
+  });
 }
 
-lex([], '-');
-// function tokenize(source: string): readonly TokenType[] {
-//   const tokens: TokenType[] = [];
-//   for (let i = 0; i < source.length; i = i + 1)
-//     lex(tokens, source[i]);
+function tokenize(source: string): readonly Token[] {
+  const state: LexState = { tokens: [] };
+  for (let i = 0; i < source.length; i++)
+    lex(state, source[i]);
 
-//   return tokens;
-// }
+  return state.tokens;
+}
 
-// console.log(tokenize("+-*/"));
+console.log(tokenize("+-*/"));

@@ -16,13 +16,56 @@ import ts, {
   isWhileStatement
 } from "typescript";
 
-import { constantVmValue } from "@/bytecode/vm-value";
-import { LOADV } from "@/bytecode/instructions/loadv";
+import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
+import { isLOADV, LOADV } from "@/bytecode/instructions/loadv";
 import { INC } from "@/bytecode/instructions/inc";
 import { DEC } from "@/bytecode/instructions/dec";
 import { JMP } from "@/bytecode/instructions/jmp";
+import { INDEX } from "@/bytecode/instructions";
+import { INDEXK } from "@/bytecode/instructions/indexk";
+import { INDEXN } from "@/bytecode/instructions/indexn";
 import { type InstructionJZ, JZ } from "@/bytecode/instructions/jz";
 import type { Codegen } from "@/codegen";
+
+/**
+ * Emits bytecode for accessing the given property/index of the given object.
+ *
+ * This function will emit an instruction for accessing the property/index of the
+ * object, taking into account whether the index is a constant or a runtime
+ * expression. If the index is a constant number, the instruction will be an
+ * {@linkcode INDEXN} instruction, if it is a VmValue it will be an {@linkcode INDEXK}
+ * instruction, otherwise it will be an {@linkcode INDEX} instruction
+ * instruction.
+ */
+export function emitAccess(codegen: Codegen, object: ts.LeftHandSideExpression, index: ts.Expression, isPropertyAccess: boolean): void {
+  const propertyAccess = isIdentifier(index) && isPropertyAccess;
+  const objectInstruction = codegen.visit(object);
+  const indexInstruction = propertyAccess
+    ? LOADV(codegen.allocRegister(), constantVmValue(index.text))
+    : codegen.visit(index);
+
+  const objectRegister = codegen.getTargetRegister(objectInstruction);
+  const indexRegister = codegen.getTargetRegister(indexInstruction);
+  const value = codegen.getConstantValue(index);
+  const isLoad = isLOADV(indexInstruction);
+  if (value !== undefined || isLoad) {
+    const indexValue = isLoad ? indexInstruction.value : constantVmValue(value!);
+    const register = codegen.getTargetRegister(indexInstruction);
+    if (!propertyAccess)
+      codegen.undoLastAddition();
+
+    if (indexValue.kind === VmValueKind.Int)
+      codegen.pushInstruction(INDEXN(register, objectRegister, indexValue.value as number));
+    else
+      codegen.pushInstruction(INDEXK(register, objectRegister, indexValue));
+
+  } else {
+    const register = codegen.allocRegister();
+    codegen.freeRegister(indexRegister);
+    codegen.pushInstruction(INDEX(register, objectRegister, indexRegister));
+  }
+  codegen.freeRegister(objectRegister);
+}
 
 /**
  * Emits a increment/decrement instruction for the given AST node.
@@ -32,21 +75,22 @@ import type { Codegen } from "@/codegen";
  */
 export function emitIncrementor(codegen: Codegen, node: ts.PrefixUnaryExpression | ts.PostfixUnaryExpression, returnsOld: boolean): void {
   const op = node.operator === ts.SyntaxKind.PlusPlusToken ? INC : DEC;
-  const isAlone = findAncestor(node, a => isExpressionStatement(a)
+  const isAlone = findAncestor(node, a =>
+    isExpressionStatement(a)
     && !isCallExpression(a.expression)
     && !isElementAccessExpression(a.expression)
   );
+
   const targetRegister = isAlone ? undefined : codegen.allocRegister();
   if (isIdentifier(node.operand))
     codegen.pushInstruction(op(targetRegister, node.operand.text, returnsOld));
-  else {
+  else
     throw new Error("Incrementing/decrementing non-identifiers is not yet supported");
-  }
 }
 
 /**
- * Returns true if the given variable can be inlined. This is only true if the variable
- * is declared as a constant and has a constant initializer.
+ * Returns true if the given variable can be inlined. This is only true if
+ * the variable is declared as a constant and has a constant initializer.
  */
 export function canInlineVariable(node: ts.VariableDeclaration, codegen: Codegen): node is ts.VariableDeclaration & { initializer: ts.Expression } {
   const list = node.parent as ts.VariableDeclarationList;
@@ -143,14 +187,9 @@ function isDirectlyRecursive(
   if (!fn.body) return false;
 
   const fnNameNode = (fn as ts.FunctionDeclaration | ts.MethodDeclaration).name;
-  if (!fnNameNode) {
-    const fnSymbol = codegen.getSymbol(fn);
-    if (!fnSymbol) return false;
-    return containsCallSymbol(fn.body, fnSymbol, codegen);
-  }
-
-  const fnSymbol = codegen.getSymbol(fnNameNode);
-  if (!fnSymbol) return false;
+  const fnSymbol = codegen.getSymbol(fnNameNode ?? fn);
+  if (!fnSymbol)
+    return false;
 
   return containsCallSymbol(fn.body, fnSymbol, codegen);
 }
@@ -167,6 +206,7 @@ function containsCallSymbol(
       const calledSymbol = codegen.getSymbol(n.expression);
       if (calledSymbol === fnSymbol) {
         recursive = true;
+        return;
       }
     }
     ts.forEachChild(n, visit);

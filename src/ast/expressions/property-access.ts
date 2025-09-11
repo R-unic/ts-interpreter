@@ -1,7 +1,8 @@
 import ts from "typescript";
 
+import { emitAccess, isElementOrPropertyAssignment } from "../utility";
+import { getPropertyAccessMacro } from "@/ast/macros/property-access";
 import { loadConstant } from "@/bytecode/utility";
-import { getPropertyAccessMacro } from "../macros/property-access";
 import type { Codegen } from "@/codegen";
 
 export function visitPropertyAccessExpression(codegen: Codegen, node: ts.PropertyAccessExpression): void {
@@ -13,5 +14,6 @@ export function visitPropertyAccessExpression(codegen: Codegen, node: ts.Propert
   if (macro)
     return macro();
 
-  // TODO:
+  if (isElementOrPropertyAssignment(node)) return;
+  emitAccess(codegen, node.expression, node.name, true);
 }

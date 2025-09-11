@@ -25,12 +25,14 @@ import ts, {
   isDeleteExpression,
   isPrefixUnaryExpression,
   isPostfixUnaryExpression,
-  isObjectLiteralExpression
+  isObjectLiteralExpression,
+  isInterfaceDeclaration,
+  isTypeAliasDeclaration
 } from "typescript";
 import assert from "assert";
 
 import { canInlineFunction, canInlineVariable, getTypeOfNode } from "@/ast/utility";
-import { getTargetRegister, maybeGetTargetRegister } from "@/bytecode/utility";
+import { getTargetRegister, maybeGetSourceRegister, maybeGetTargetRegister } from "@/bytecode/utility";
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
 import { visitFalseLiteral } from "@/ast/expressions/false-literal";
 import { visitNumericLiteral } from "@/ast/expressions/numeric-literal";
@@ -54,14 +56,14 @@ import { visitContinueStatement } from "@/ast/statements/continue";
 import { visitBlock } from "@/ast/statements/block";
 import { visitArrayLiteralExpression } from "./ast/expressions/array-literal";
 import { visitDeleteExpression } from "./ast/expressions/delete";
+import { visitPrefixUnaryExpression } from "./ast/expressions/prefix-unary";
+import { visitPostfixUnaryExpression } from "./ast/expressions/postfix-unary";
+import { visitObjectLiteralExpression } from "./ast/expressions/object-literal";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
 import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
-import { visitPrefixUnaryExpression } from "./ast/expressions/prefix-unary";
-import { visitPostfixUnaryExpression } from "./ast/expressions/postfix-unary";
-import { visitObjectLiteralExpression } from "./ast/expressions/object-literal";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
@@ -89,8 +91,8 @@ export class Codegen {
   private emitResult: Instruction[] = [];
   private previousEmitResult: Instruction[] = [];
   private functions = new Map<ts.Symbol, FunctionLabel>;
-  private allocatedRegisters = new Set<number>;
-  private closestFreeRegister = 0;
+  public allocatedRegisters = new Set<number>;
+  public closestFreeRegister = 0;
 
   public constructor(
     program: ts.Program,
@@ -126,8 +128,8 @@ export class Codegen {
       this.visitChildren(node);
 
     const instruction = this.lastInstruction<T>();
-    if (instruction === undefined)
-      throw new Error("No instruction emitted -- cannot return");
+    // if (instruction === undefined)
+    //   throw new Error("No instruction emitted for node: " + ts.SyntaxKind[node.kind]);
 
     return instruction;
   }
@@ -165,17 +167,29 @@ export class Codegen {
     const set = new Set(this.previousEmitResult);
     const difference = this.emitResult.filter(v => !set.has(v));
     for (const instruction of difference) {
-      const register = maybeGetTargetRegister(instruction);
-      if (register === undefined) continue;
-      this.freeRegister(register);
+      const targetRegister = maybeGetTargetRegister(instruction);
+      if (targetRegister !== undefined)
+        this.freeRegister(targetRegister);
+
+      const sourceRegister = maybeGetSourceRegister(instruction);
+      if (sourceRegister !== undefined)
+        this.freeRegister(sourceRegister);
     }
 
     this.emitResult = this.previousEmitResult;
   }
 
   public allocRegister(): number {
-    const register = this.closestFreeRegister;
-    this.closestFreeRegister = Math.min(this.closestFreeRegister + 1, this.maxRegisters);
+    const register = this.allocatedRegisters.has(this.closestFreeRegister)
+      ? Math.min(
+        this.allocatedRegisters.has(this.closestFreeRegister - 1)
+          ? this.closestFreeRegister + 1
+          : this.closestFreeRegister - 1,
+        this.maxRegisters
+      )
+      : this.closestFreeRegister;
+
+    this.closestFreeRegister = Math.min(register + 1, this.maxRegisters);
     this.allocatedRegisters.add(register);
 
     return register;
@@ -364,7 +378,7 @@ export class Codegen {
       }
     }
 
-    if (ts.isIdentifier(node)) {
+    if (isIdentifier(node)) {
       const symbol = this.getSymbol(node);
       if (symbol) {
         const declaration = symbol.valueDeclaration;
@@ -373,7 +387,7 @@ export class Codegen {
             return this.getConstantValue(declaration.initializer);
           else if (isParameter(declaration)) {
             const symbol = this.getSymbol(declaration.name);
-            assert(symbol, "no symbol for parameter");
+            assert(symbol, "No symbol for parameter");
 
             const value = this.parameterValues.get(symbol);
             if (value !== undefined)
@@ -381,9 +395,10 @@ export class Codegen {
           }
         }
       }
-    }
+    } else if (isPropertyAccessExpression(node) || isElementAccessExpression(node))
+      return this.checker.getConstantValue(node as never);
 
-    return this.checker.getConstantValue(node as never);
+    return undefined;
   }
 
   public backpatchLoopConstructs(loopStart: number, loopEnd: number): void {
@@ -499,7 +514,9 @@ export class Codegen {
     else if (isVariableStatement(node))
       for (const declaration of node.declarationList.declarations)
         visitVariableDeclaration(this, declaration);
-    else
+    else if (isInterfaceDeclaration(node) || isTypeAliasDeclaration(node)) {
+      // do nothing
+    } else
       this.visitChildren(node);
   }
 

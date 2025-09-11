@@ -40,8 +40,6 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
   let rightRegister: number = -1;
   switch (node.operatorToken.kind) {
     case ts.SyntaxKind.EqualsToken: {
-      // TODO: prop access assignment
-
       if (isElementAccessExpression(node.left)) {
         const objectInstruction = codegen.visit(node.left.expression);
         const objectRegister = codegen.getTargetRegister(objectInstruction);

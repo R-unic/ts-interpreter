@@ -61,7 +61,10 @@ export function getCallMacro(node: ts.CallExpression, codegen: Codegen): (() => 
           codegen.undoLastAddition();
           codegen.pushInstruction(ARRAY_PUSHK(arrayRegister, isLoad ? instruction.value : constantVmValue(constantValue!)));
         } else {
-          const register = codegen.getTargetRegister(instruction);
+          const register = "object" in instruction && typeof instruction.object === "number"
+            ? instruction.object
+            : codegen.getTargetRegister(instruction);
+
           codegen.pushInstruction(ARRAY_PUSH(arrayRegister, register));
           codegen.freeRegister(register);
         }

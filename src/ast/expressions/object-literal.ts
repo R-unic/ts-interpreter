@@ -1,4 +1,4 @@
-import ts, { isComputedPropertyName, isIdentifier, isPropertyAssignment } from "typescript";
+import ts, { isComputedPropertyName, isIdentifier, isPropertyAssignment, isShorthandPropertyAssignment } from "typescript";
 
 import { constantVmValue } from "@/bytecode/vm-value";
 import { NEW_OBJECT } from "@/bytecode/instructions/new-object";
@@ -20,8 +20,16 @@ export function visitObjectLiteralExpression(codegen: Codegen, node: ts.ObjectLi
       else if (isComputedPropertyName(property.name)) {
         const indexInstruction = codegen.visit(property.name.expression);
         const indexRegister = codegen.getTargetRegister(indexInstruction);
+        codegen.freeRegister(indexRegister);
         codegen.pushInstruction(STORE_INDEX(valueRegister, register, indexRegister));
       }
+
+      codegen.freeRegister(valueRegister);
+    } else if (isShorthandPropertyAssignment(property)) {
+      const valueInstruction = codegen.visit(property.name);
+      const valueRegister = codegen.getTargetRegister(valueInstruction);
+      codegen.pushInstruction(STORE_INDEXK(valueRegister, register, constantVmValue(property.name.text)));
+      codegen.freeRegister(valueRegister);
     } else {
       throw new Error("Not yet supported object element literal: " + ts.SyntaxKind[property.kind]);
     }
