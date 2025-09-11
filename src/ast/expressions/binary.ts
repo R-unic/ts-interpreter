@@ -4,13 +4,13 @@ import assert from "assert";
 import { createStore, loadConstant } from "@/bytecode/utility";
 import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
 import { InstructionOp } from "@/bytecode/structs";
+import { isLOADV } from "@/bytecode/instructions/loadv";
 import { binaryInstruction } from "@/bytecode/instructions/binary";
-import { isLOADV, LOADV } from "@/bytecode/instructions/loadv";
+import { constantBinaryInstruction } from "@/bytecode/instructions/constant-binary";
 import { STORE_INDEXN } from "@/bytecode/instructions/store-indexn";
 import { STORE_INDEXK } from "@/bytecode/instructions/store-indexk";
 import { STORE_INDEX } from "@/bytecode/instructions/store-index";
 import type { Codegen } from "@/codegen";
-import { constantBinaryInstruction } from "@/bytecode/instructions/constant-binary";
 
 const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.PlusToken]: InstructionOp.ADD,

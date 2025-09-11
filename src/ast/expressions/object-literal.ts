@@ -1,9 +1,11 @@
 import ts, { isComputedPropertyName, isIdentifier, isPropertyAssignment, isShorthandPropertyAssignment } from "typescript";
 
-import { constantVmValue } from "@/bytecode/vm-value";
+import { constantVmValue, VmValueKind } from "@/bytecode/vm-value";
+import { isLOADV } from "@/bytecode/instructions/loadv";
 import { NEW_OBJECT } from "@/bytecode/instructions/new-object";
 import { STORE_INDEX } from "@/bytecode/instructions/store-index";
 import { STORE_INDEXK } from "@/bytecode/instructions/store-indexk";
+import { STORE_INDEXN } from "@/bytecode/instructions/store-indexn";
 import type { Codegen } from "@/codegen";
 
 export function visitObjectLiteralExpression(codegen: Codegen, node: ts.ObjectLiteralExpression): void {
@@ -18,10 +20,23 @@ export function visitObjectLiteralExpression(codegen: Codegen, node: ts.ObjectLi
       if (isIdentifier(property.name))
         codegen.pushInstruction(STORE_INDEXK(valueRegister, register, constantVmValue(property.name.text)));
       else if (isComputedPropertyName(property.name)) {
-        const indexInstruction = codegen.visit(property.name.expression);
+        const index = property.name.expression;
+        const indexInstruction = codegen.visit(index);
+        const constantValue = codegen.getConstantValue(index);
         const indexRegister = codegen.getTargetRegister(indexInstruction);
         codegen.freeRegister(indexRegister);
-        codegen.pushInstruction(STORE_INDEX(valueRegister, register, indexRegister));
+
+        const isLoad = isLOADV(indexInstruction);
+        if (constantValue !== undefined || isLoad) {
+          const value = isLoad ? indexInstruction.value : constantVmValue(constantValue!);
+          codegen.undoLastAddition();
+
+          if (value.kind === VmValueKind.Int)
+            codegen.pushInstruction(STORE_INDEXN(valueRegister, register, value.value as number));
+          else
+            codegen.pushInstruction(STORE_INDEXK(valueRegister, register, value));
+        } else
+          codegen.pushInstruction(STORE_INDEX(valueRegister, register, indexRegister));
       }
 
       codegen.freeRegister(valueRegister);
