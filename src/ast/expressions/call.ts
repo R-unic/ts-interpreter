@@ -32,9 +32,12 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
     if (label.inlined && fn.body) {
       codegen.visitList(fn.body.statements);
 
+      // TODO: somehow predict which path it will take to give the right return register
       const end = codegen.currentIndex();
-      for (const instruction of codegen.toPatch.inlineReturns)
+      for (const [instruction, register] of label.inlineReturns) {
         instruction.address = end;
+        codegen.closestFreeRegister = register;
+      }
 
       return;
     }

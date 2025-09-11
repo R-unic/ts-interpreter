@@ -96,6 +96,7 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
 
       assert(isIdentifier(node.left) || isPrivateIdentifier(node.left), "Binding patterns not yet supported");
       codegen.pushInstruction(createStore(codegen, node.left.text, node.right));
+      codegen.freeRegister(rightRegister);
       break;
     }
 
@@ -106,14 +107,13 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
         throw new Error(`Unsupported binary operator ${ts.SyntaxKind[operatorKind]}`);
 
       const constOp = CONST_OPERATOR_OPCODE_MAP[operatorKind];
+      const resultType = codegen.getType(node);
       // replace the left register's value with the result
       const left = codegen.visit(node.left);
       const leftConstant = codegen.getConstantValue(node.left);
       const isLeftLoad = isLOADV(left);
       if (constOp !== undefined && (leftConstant !== undefined || isLeftLoad)) {
         const value = isLeftLoad ? left.value : constantVmValue(leftConstant!);
-        const register = codegen.getTargetRegister(left);
-        codegen.freeRegister(register);
         codegen.undoLastAddition();
 
         const right = codegen.visit(node.right);
@@ -125,10 +125,14 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
       const right = codegen.visit(node.right);
       const rightConstant = codegen.getConstantValue(node.right);
       const isRightLoad = isLOADV(right);
-      if (constOp === InstructionOp.ADDK && (rightConstant !== undefined || isRightLoad)) {
+      if (
+        constOp === InstructionOp.ADDK
+        && resultType !== undefined
+        && !codegen.isStringLikeType(resultType)
+        && (rightConstant !== undefined || isRightLoad)
+      ) {
         const value = isRightLoad ? right.value : constantVmValue(rightConstant!);
         const register = codegen.getTargetRegister(right);
-        codegen.freeRegister(register);
         codegen.undoLastAddition();
         codegen.pushInstruction(constantBinaryInstruction(constOp, register, value, register));
         break;
@@ -137,10 +141,8 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
       const leftRegister = codegen.getTargetRegister(left);
       rightRegister = codegen.getTargetRegister(right);
       codegen.pushInstruction(binaryInstruction(op, leftRegister, leftRegister, rightRegister));
+      codegen.freeRegister(rightRegister);
       break;
     }
   }
-
-  // free the right value (we don't need it anymore)
-  codegen.freeRegister(rightRegister);
 }

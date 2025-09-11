@@ -17,13 +17,6 @@ export function visitReturnStatement(codegen: Codegen, node: ts.ReturnStatement)
   if (!symbol)
     throw new Error("Failed to find return statement's function symbol");
 
-  const label = codegen.getFunctionLabel(symbol);
-  if (label && label.inlined) {
-    const instruction = JMP(-1);
-    codegen.toPatch.inlineReturns.add(instruction);
-    return void codegen.pushInstruction(instruction);
-  }
-
   let register: number;
   if (node.expression) {
     const instruction = codegen.visit(node.expression);
@@ -33,6 +26,13 @@ export function visitReturnStatement(codegen: Codegen, node: ts.ReturnStatement)
     codegen.pushInstruction(loadNull(register));
   }
 
-  codegen.pushInstruction(RETURN);
   codegen.freeRegister(register);
+  const label = codegen.getFunctionLabel(symbol);
+  if (label && label.inlined) {
+    const returnJump = JMP(-1);
+    label.inlineReturns.set(returnJump, register);
+    return void codegen.pushInstruction(returnJump);
+  }
+
+  codegen.pushInstruction(RETURN);
 }

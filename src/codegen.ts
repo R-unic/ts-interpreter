@@ -27,7 +27,8 @@ import ts, {
   isPostfixUnaryExpression,
   isObjectLiteralExpression,
   isInterfaceDeclaration,
-  isTypeAliasDeclaration
+  isTypeAliasDeclaration,
+  isShorthandPropertyAssignment
 } from "typescript";
 import assert from "assert";
 
@@ -66,26 +67,28 @@ import { JZ } from "./bytecode/instructions/jz";
 import { InstructionOp, type Bytecode, type Instruction, type ConditionJumpInstruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
+import { getPropertyAccessMacro } from "./ast/macros/property-access";
+import { isLOADV } from "./bytecode/instructions/loadv";
+import { getCallMacro } from "./ast/macros/call";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
   readonly inlined: boolean;
   readonly symbol: ts.Symbol;
+  readonly inlineReturns: Map<Writable<InstructionJMP>, number>;
 }
 
 interface ToPatch {
   calls: Map<ts.Symbol, Set<Writable<InstructionCALL>>>;
   breaks: Set<Writable<InstructionJMP>>;
   continues: Set<Writable<InstructionJMP>>;
-  inlineReturns: Set<Writable<InstructionJMP>>;
 }
 
 export class Codegen {
   public readonly toPatch: ToPatch = {
     calls: new Map,
     breaks: new Set,
-    continues: new Set,
-    inlineReturns: new Set,
+    continues: new Set
   };
   public parameterValues = new Map<ts.Symbol, ts.Expression>;
 
@@ -299,6 +302,7 @@ export class Codegen {
     this.functions.set(symbol, {
       declaration: node,
       inlined: canInlineFunction(node, this),
+      inlineReturns: new Map,
       symbol,
     });
   }
@@ -334,9 +338,9 @@ export class Codegen {
     return [type, symbol];
   }
 
-  public getUnaliasedSymbol(node: ts.Node): ts.Symbol | undefined {
-    let symbol = this.getSymbol(node);
-    if (symbol && symbol.flags & ts.SymbolFlags.Alias)
+  public getUnaliasedSymbol(node: ts.Node | ts.Symbol): ts.Symbol | undefined {
+    let symbol = this.pickSymbol(node);
+    if (symbol) // && (symbol.flags & ts.SymbolFlags.Alias) !== 0
       symbol = this.checker.getAliasedSymbol(symbol);
 
     return symbol;
@@ -419,27 +423,61 @@ export class Codegen {
       }
     }
 
-    if (isIdentifier(node)) {
-      const symbol = this.getSymbol(node);
-      if (symbol) {
-        const declaration = symbol.valueDeclaration;
-        if (declaration) {
-          if (isVariableDeclaration(declaration) && canInlineVariable(declaration, this))
-            return this.getConstantValue(declaration.initializer);
-          else if (isParameter(declaration)) {
-            const symbol = this.getSymbol(declaration.name);
-            assert(symbol, "No symbol for parameter");
-
-            const value = this.parameterValues.get(symbol);
-            if (value !== undefined)
-              return this.getConstantValue(value);
-          }
+    if (isCallExpression(node)) {
+      const macro = getCallMacro(node, this);
+      if (macro) {
+        macro();
+        const instruction = this.lastInstruction();
+        if (isLOADV(instruction) && typeof instruction.value.value !== "object") {
+          this.undoLastAddition();
+          return instruction.value.value;
         }
       }
-    } else if (isPropertyAccessExpression(node) || isElementAccessExpression(node))
+    }
+
+    if (isPropertyAccessExpression(node)) {
+      const macro = getPropertyAccessMacro(node, this);
+      if (macro) {
+        macro();
+        const instruction = this.lastInstruction();
+        if (isLOADV(instruction) && typeof instruction.value.value !== "object") {
+          this.undoLastAddition();
+          return instruction.value.value;
+        }
+      }
+
+      return this.checker.getConstantValue(node as never);
+    }
+
+    if (isPropertyAccessExpression(node) || isElementAccessExpression(node))
       return this.checker.getConstantValue(node as never);
 
+    const symbol = this.getSymbol(node);
+    if (isIdentifier(node) && symbol)
+      return this.resolveIdentifierConstant(symbol)
+
     return undefined;
+  }
+
+  private resolveIdentifierConstant(symbol: ts.Symbol): string | number | boolean | undefined {
+    const declaration = symbol.valueDeclaration;
+    if (!declaration) return;
+
+    if (isVariableDeclaration(declaration) && canInlineVariable(declaration, this))
+      return this.getConstantValue(declaration.initializer);
+    else if (isParameter(declaration)) {
+      const paramSymbol = this.getSymbol(declaration.name);
+      assert(paramSymbol, "No symbol for parameter");
+
+      const value = this.parameterValues.get(paramSymbol);
+      if (value !== undefined)
+        return this.getConstantValue(value);
+    } else if (isShorthandPropertyAssignment(declaration)) {
+      const unaliased = this.checker.getShorthandAssignmentValueSymbol(declaration);
+      assert(unaliased, "No symbol for shorthand assignment value");
+
+      return this.resolveIdentifierConstant(unaliased);
+    }
   }
 
   public backpatchLoopConstructs(loopStart: number, loopEnd: number): void {
@@ -496,6 +534,12 @@ export class Codegen {
 
   private pickType(node: ts.Node | ts.Type): ts.Type | undefined {
     return "pos" in node && "end" in node ? this.getType(node) : node;
+  }
+
+  private pickSymbol(node: ts.Node | ts.Symbol): ts.Symbol | undefined {
+    return "escapedName" in node && "name" in node && typeof node.name === "string"
+      ? node
+      : this.getSymbol(node as ts.Node);
   }
 
   private visitExpression(node: ts.Expression): void {

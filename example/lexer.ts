@@ -11,19 +11,31 @@ interface Token {
 }
 
 interface LexState {
+  readonly sourceLength: number;
+  readonly source: string;
   readonly tokens: Token[];
+  position: number;
+}
+
+const ONE_CHARACTER_TOKENS: Record<string, TokenKind> = {
+  ["+"]: TokenKind.Plus,
+  ["-"]: TokenKind.Minus,
+  ["*"]: TokenKind.Star,
+  ["/"]: TokenKind.Slash,
+}
+
+function tokenize(source: string): readonly Token[] {
+  const sourceLength = source.length;
+  const state: LexState = { sourceLength, source, tokens: [], position: 0 };
+  while (!isEOF(state))
+    lex(state, currentCharacter(state));
+
+  return state.tokens;
 }
 
 function lex(state: LexState, char: string): void {
-  let kind: TokenKind | undefined;
-  if (char === '+')
-    kind = TokenKind.Plus;
-  else if (char === '-')
-    kind = TokenKind.Minus;
-  else if (char === '*')
-    kind = TokenKind.Star;
-  else if (char === '/')
-    kind = TokenKind.Slash;
+  const kind = ONE_CHARACTER_TOKENS[char];
+  advance(state);
 
   if (!kind) {
     console.log("Unexpected character: '" + char + "'");
@@ -36,12 +48,16 @@ function lex(state: LexState, char: string): void {
   });
 }
 
-function tokenize(source: string): readonly Token[] {
-  const state: LexState = { tokens: [] };
-  for (let i = 0; i < source.length; i++)
-    lex(state, source[i]);
+function advance(state: LexState, amount = 1): void {
+  state.position = state.position + amount;
+}
 
-  return state.tokens;
+function currentCharacter(state: LexState): string {
+  return state.source[state.position];
+}
+
+function isEOF(state: LexState): boolean {
+  return state.position >= state.sourceLength;
 }
 
 console.log(tokenize("+-*/"));

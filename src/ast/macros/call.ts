@@ -42,7 +42,7 @@ export function getCallMacro(node: ts.CallExpression, codegen: Codegen): (() => 
         codegen.pushInstruction(PRINTK(isLoad ? instruction.value : constantVmValue(constantValue!)));
       } else {
         const register = codegen.getTargetRegister(instruction);
-        codegen.pushInstruction(PRINT(register + (isCALL(instruction) ? 1 : 0)));
+        codegen.pushInstruction(PRINT(register));
         codegen.freeRegister(register);
       }
     };
