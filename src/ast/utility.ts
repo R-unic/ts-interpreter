@@ -24,7 +24,7 @@ import { JMP } from "@/bytecode/instructions/jmp";
 import { INDEX } from "@/bytecode/instructions";
 import { INDEXK } from "@/bytecode/instructions/indexk";
 import { INDEXN } from "@/bytecode/instructions/indexn";
-import { type InstructionJZ, JZ } from "@/bytecode/instructions/jz";
+import type { ConditionJumpInstruction } from "@/bytecode/structs";
 import type { Codegen } from "@/codegen";
 
 /**
@@ -111,23 +111,19 @@ export function isElementOrPropertyAssignment(node: ts.ElementAccessExpression |
 }
 
 /**
- * Generates code for a while loop. The condition is evaluated at the top of the loop,
+ * Emits code for a while loop. The condition is evaluated at the top of the loop,
  * and the loop body is executed if the condition evaluates to true. The afterBody
  * argument is optional, and is executed after the loop body on each iteration.
  * @param condition The condition to evaluate at the top of the loop.
  * @param body The loop body.
  * @param afterBody The expression to execute after the loop body on each iteration.
  */
-export function whileLoop(codegen: Codegen, condition: ts.Expression, body: ts.Statement, afterBody?: ts.Expression): void {
+export function emitWhileLoop(codegen: Codegen, condition: ts.Expression, body: ts.Statement, afterBody?: ts.Expression): void {
   const start = codegen.currentIndex();
   const infiniteLoop = isTruthyConstant(condition, codegen);
-  let jz: Writable<InstructionJZ> | undefined;
-  if (!infiniteLoop) {
-    const instruction = codegen.visit(condition);
-    const conditionRegister = codegen.getTargetRegister(instruction);
-    codegen.freeRegister(conditionRegister);
-    jz = codegen.pushInstruction(JZ(conditionRegister, -1));
-  }
+  let conditionJump: Writable<ConditionJumpInstruction> | undefined;
+  if (!infiniteLoop)
+    conditionJump = codegen.visitCondition(condition);
 
   codegen.visit(body);
   if (afterBody) codegen.visit(afterBody);
@@ -135,7 +131,7 @@ export function whileLoop(codegen: Codegen, condition: ts.Expression, body: ts.S
 
   const end = codegen.currentIndex();
   codegen.backpatchLoopConstructs(start, end);
-  if (jz) jz.address = end;
+  if (conditionJump) conditionJump.address = end;
 }
 
 /** Returns true if the given expression evaluates to a truthy constant value. */

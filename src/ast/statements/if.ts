@@ -1,15 +1,11 @@
 import type ts from "typescript";
 
-import { JZ } from "@/bytecode/instructions/jz";
 import { InstructionJMP, JMP } from "@/bytecode/instructions/jmp";
+import type { ConditionJumpInstruction } from "@/bytecode/structs";
 import type { Codegen } from "@/codegen";
 
 export function visitIfStatement(codegen: Codegen, node: ts.IfStatement): void {
-  const condition = codegen.visit(node.expression);
-  const conditionRegister = codegen.getTargetRegister(condition);
-  codegen.freeRegister(conditionRegister);
-
-  const jz = codegen.pushInstruction(JZ(conditionRegister, -1));
+  const conditionJump: Writable<ConditionJumpInstruction> = codegen.visitCondition(node.expression);
   codegen.registerScope(() => codegen.visit(node.thenStatement));
 
   let jmp: Writable<InstructionJMP> | undefined;
@@ -24,10 +20,10 @@ export function visitIfStatement(codegen: Codegen, node: ts.IfStatement): void {
   });
 
   const end = codegen.currentIndex();
-  const jzIndex = hasElseStatement ? elseBranchIndex : end;
+  const conditionJumpIndex = hasElseStatement ? elseBranchIndex : end;
 
   // backpatch addresses
-  jz.address = jzIndex;
+  conditionJump.address = conditionJumpIndex;
   if (jmp)
     jmp.address = end;
 }

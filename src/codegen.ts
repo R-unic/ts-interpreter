@@ -59,9 +59,11 @@ import { visitDeleteExpression } from "./ast/expressions/delete";
 import { visitPrefixUnaryExpression } from "./ast/expressions/prefix-unary";
 import { visitPostfixUnaryExpression } from "./ast/expressions/postfix-unary";
 import { visitObjectLiteralExpression } from "./ast/expressions/object-literal";
+import { binaryJumpInstruction } from "./bytecode/instructions/binary-jump";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
-import { InstructionOp, type Bytecode, type Instruction } from "@/bytecode/structs";
+import { JZ } from "./bytecode/instructions/jz";
+import { InstructionOp, type Bytecode, type Instruction, type ConditionJumpInstruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
 
@@ -139,6 +141,45 @@ export class Codegen {
       this.visit(node);
 
     return this.lastInstruction();
+  }
+
+  public visitCondition(condition: ts.Expression): ConditionJumpInstruction {
+    const conditionRegister = this.getTargetRegister(this.visit(condition));
+
+    let instruction: ConditionJumpInstruction = JZ(conditionRegister, -1);
+    if (isBinaryExpression(condition)) {
+      let op: InstructionOp | undefined;
+      switch (condition.operatorToken.kind) {
+        case ts.SyntaxKind.LessThanToken:
+          op = InstructionOp.JGTE;
+          break;
+        case ts.SyntaxKind.LessThanEqualsToken:
+          op = InstructionOp.JGT;
+          break;
+        case ts.SyntaxKind.GreaterThanToken:
+          op = InstructionOp.JLTE;
+          break;
+        case ts.SyntaxKind.GreaterThanEqualsToken:
+          op = InstructionOp.JLT;
+          break;
+        case ts.SyntaxKind.EqualsEqualsEqualsToken:
+          op = InstructionOp.JNEQ;
+          break;
+        case ts.SyntaxKind.ExclamationEqualsEqualsToken:
+          op = InstructionOp.JEQ;
+          break;
+      }
+
+      if (op !== undefined) {
+        this.undoLastAddition();
+        const aRegister = this.getTargetRegister(this.visit(condition.left));
+        const bRegister = this.getTargetRegister(this.visit(condition.right));
+        instruction = binaryJumpInstruction(op, aRegister, bRegister, -1);
+      }
+    }
+
+    this.freeRegister(conditionRegister);
+    return this.pushInstruction(instruction);
   }
 
   public visitChildren<T extends ts.Node>(node: T): void {

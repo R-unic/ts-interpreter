@@ -1,7 +1,7 @@
 import ts, { isVariableDeclarationList } from "typescript";
 
 import { Null } from "@/bytecode/vm-value";
-import { whileLoop } from "../utility";
+import { emitWhileLoop } from "../utility";
 import { STOREK } from "@/bytecode/instructions/storek";
 import type { Codegen } from "@/codegen";
 
@@ -15,7 +15,7 @@ export function visitForStatement(codegen: Codegen, node: ts.ForStatement): void
       codegen.visit(declaration);
     }
 
-  whileLoop(codegen, node.condition ?? TRUE, node.statement, node.incrementor);
+  emitWhileLoop(codegen, node.condition ?? TRUE, node.statement, node.incrementor);
 
   for (const declaration of declarations)
     codegen.pushInstruction(STOREK((declaration.name as ts.Identifier).text, Null));

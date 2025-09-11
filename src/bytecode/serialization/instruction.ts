@@ -25,6 +25,7 @@ import { isSTOREK } from "../instructions/storek";
 import { isPRINTK } from "../instructions/printk";
 import { VmValueKind, type VmValue } from "../vm-value";
 import type { Instruction } from "../structs";
+import { isBinaryJump } from "../instructions/binary-jump";
 
 function getBytesOccupiedByStrings(instruction: Instruction): number {
   let stringBytes = 0;
@@ -91,6 +92,10 @@ export function serializeInstruction(instruction: Instruction): { result: Buffer
     } else if (isSTOREK(instruction)) {
       writeVmValue(instruction.value);
     }
+  } else if (isBinaryJump(instruction)) {
+    offset += writeVarInt(buffer, offset, instruction.a);
+    offset += writeVarInt(buffer, offset, instruction.b);
+    offset += writeVarInt(buffer, offset, instruction.address);
   } else if (isJMP(instruction) || isJZ(instruction) || isJNZ(instruction) || isCALL(instruction)) {
     offset += writeVarInt(buffer, offset, instruction.address);
   } else if (
