@@ -32,6 +32,8 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.EqualsEqualsEqualsToken]: InstructionOp.EQ,
   [ts.SyntaxKind.ExclamationEqualsEqualsToken]: InstructionOp.NEQ,
 };
+
+const BIDIRECTIONAL_CONST_OPS = new Set([InstructionOp.ADDK, InstructionOp.MULK, InstructionOp.ANDK, InstructionOp.ORK]);
 const CONST_OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.PlusToken]: InstructionOp.ADDK,
   [ts.SyntaxKind.MinusToken]: InstructionOp.SUBK,
@@ -126,12 +128,9 @@ export function visitBinaryExpression(codegen: Codegen, node: ts.BinaryExpressio
       const right = codegen.visit(node.right);
       const rightConstant = codegen.getConstantValue(node.right);
       const isRightLoad = isLOADV(right);
-      if (
-        constOp === InstructionOp.ADDK
-        && resultType !== undefined
-        && !codegen.isStringLikeType(resultType)
-        && (rightConstant !== undefined || isRightLoad)
-      ) {
+      const isBidirectionalOp = constOp !== undefined && BIDIRECTIONAL_CONST_OPS.has(constOp);
+      const producesString = resultType !== undefined && !codegen.isStringLikeType(resultType);
+      if (isBidirectionalOp && producesString && (rightConstant !== undefined || isRightLoad)) {
         const value = isRightLoad ? right.value : constantVmValue(rightConstant!);
         codegen.undoLastAddition();
 
