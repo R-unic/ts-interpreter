@@ -28,7 +28,10 @@ import ts, {
   isObjectLiteralExpression,
   isInterfaceDeclaration,
   isTypeAliasDeclaration,
-  isShorthandPropertyAssignment
+  isShorthandPropertyAssignment,
+  isPropertyName,
+  isComputedPropertyName,
+  isEnumMember
 } from "typescript";
 import assert from "assert";
 
@@ -449,6 +452,18 @@ export class Codegen {
         if (isLOADV(instruction) && typeof instruction.value.value !== "object") {
           this.undoLastAddition();
           return instruction.value.value;
+        }
+      } else {
+        const result = this.getTypeOfSymbol(node);
+        if (result) {
+          const [type, symbol] = result;
+          if (
+            symbol.valueDeclaration !== undefined
+            && isEnumMember(symbol.valueDeclaration)
+            && (type.isStringLiteral() || type.isNumberLiteral())
+          ) {
+            return type.value;
+          }
         }
       }
 

@@ -2,20 +2,21 @@ import { writeVarInt } from "./utility";
 import { type VmValue, VmValueKind } from "../vm-value";
 
 export function serializeVmValue({ value, kind }: VmValue): { result: Buffer; bytesWritten: number; } {
-  let size = 12;
+  let size = 16;
   if (kind === VmValueKind.String) {
     const s = value as string;
     const byteLen = Buffer.byteLength(s, "utf8");
-    size += byteLen;
-  } else if (kind === VmValueKind.DynamicArray) {
-    size += 16 * (value as unknown[]).length;
-  }
+    size += byteLen + 1;
+  } else if (kind === VmValueKind.DynamicArray)
+    size *= (value as unknown[]).length;
+  else if (kind === VmValueKind.Object)
+    size *= 2 * (value as Map<unknown, unknown>).size;
 
   const buffer = Buffer.alloc(size);
   let offset = writeVarInt(buffer, 0, kind);
 
-  function writeVmValue(element: unknown): void {
-    const { result, bytesWritten } = serializeVmValue(element as VmValue);
+  function writeVmValue(element: VmValue): void {
+    const { result, bytesWritten } = serializeVmValue(element);
     result.copy(buffer, offset);
     offset += bytesWritten;
   }
@@ -35,7 +36,7 @@ export function serializeVmValue({ value, kind }: VmValue): { result: Buffer; by
     buffer.write(s, offset, "utf8");
     offset += byteLen
   } else if (kind === VmValueKind.DynamicArray) {
-    const arr = value as unknown[];
+    const arr = value as VmValue[];
     offset += writeVarInt(buffer, offset, arr.length);
 
     for (const element of arr)

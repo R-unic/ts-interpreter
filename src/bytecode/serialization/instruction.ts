@@ -2,6 +2,8 @@ import { writeVarInt } from "./utility";
 import { maybeGetSourceRegister, maybeGetTargetRegister } from "../utility";
 import { serializeVmValue } from "./vm-value";
 import { isBinary } from "../instructions/binary";
+import { isBinaryJump } from "../instructions/binary-jump";
+import { isConstantBinary } from "../instructions/constant-binary";
 import { isLOADV } from "../instructions/loadv";
 import { isSTORE } from "../instructions/store";
 import { isLOAD } from "../instructions/load";
@@ -25,8 +27,6 @@ import { isSTOREK } from "../instructions/storek";
 import { isPRINTK } from "../instructions/printk";
 import { VmValueKind, type VmValue } from "../vm-value";
 import type { Instruction } from "../structs";
-import { isBinaryJump } from "../instructions/binary-jump";
-import { isConstantBinary } from "../instructions/constant-binary";
 
 function getBytesOccupiedByStrings(instruction: Instruction): number {
   let stringBytes = 0;
@@ -51,7 +51,7 @@ function getBytesOccupiedByStrings(instruction: Instruction): number {
 
 export function serializeInstruction(instruction: Instruction): { result: Buffer; bytesWritten: number; } {
   const stringBytes = getBytesOccupiedByStrings(instruction);
-  const buffer = Buffer.alloc(20 + stringBytes);
+  const buffer = Buffer.alloc(Math.floor((24 + stringBytes) ** 2));
   let offset = writeVarInt(buffer, 0, instruction.op);
 
   function writeVmValue(value: VmValue): void {
