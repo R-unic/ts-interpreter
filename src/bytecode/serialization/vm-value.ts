@@ -8,9 +8,11 @@ export function serializeVmValue({ value, kind }: VmValue): { result: Buffer; by
     const byteLen = Buffer.byteLength(s, "utf8");
     size += byteLen + 1;
   } else if (kind === VmValueKind.DynamicArray)
-    size *= (value as unknown[]).length;
-  else if (kind === VmValueKind.Object)
-    size *= 2 * (value as Map<unknown, unknown>).size;
+    size += (value as unknown[]).length ** 2;
+  else if (kind === VmValueKind.Object) {
+    const map = value as Map<unknown, unknown>;
+    size += map.size ** 2;
+  }
 
   const buffer = Buffer.alloc(size);
   let offset = writeVarInt(buffer, 0, kind);
@@ -34,7 +36,7 @@ export function serializeVmValue({ value, kind }: VmValue): { result: Buffer; by
     const byteLen = Buffer.byteLength(s, "utf8");
     offset += writeVarInt(buffer, offset, byteLen);
     buffer.write(s, offset, "utf8");
-    offset += byteLen
+    offset += byteLen;
   } else if (kind === VmValueKind.DynamicArray) {
     const arr = value as VmValue[];
     offset += writeVarInt(buffer, offset, arr.length);

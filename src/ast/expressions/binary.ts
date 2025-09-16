@@ -20,6 +20,8 @@ const OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp>> = {
   [ts.SyntaxKind.PercentToken]: InstructionOp.MOD,
   [ts.SyntaxKind.AsteriskAsteriskToken]: InstructionOp.POW,
   [ts.SyntaxKind.CaretToken]: InstructionOp.BXOR,
+  [ts.SyntaxKind.AmpersandAmpersandToken]: InstructionOp.AND,
+  [ts.SyntaxKind.BarBarToken]: InstructionOp.OR,
   [ts.SyntaxKind.AmpersandToken]: InstructionOp.BAND,
   [ts.SyntaxKind.BarToken]: InstructionOp.BOR,
   [ts.SyntaxKind.LessThanLessThanToken]: InstructionOp.BLSH,
@@ -44,6 +46,8 @@ const CONST_OPERATOR_OPCODE_MAP: Partial<Record<ts.BinaryOperator, InstructionOp
   [ts.SyntaxKind.CaretToken]: InstructionOp.BXORK,
   [ts.SyntaxKind.AmpersandToken]: InstructionOp.BANDK,
   [ts.SyntaxKind.BarToken]: InstructionOp.BORK,
+  [ts.SyntaxKind.AmpersandAmpersandToken]: InstructionOp.ANDK,
+  [ts.SyntaxKind.BarBarToken]: InstructionOp.ORK,
   [ts.SyntaxKind.LessThanLessThanToken]: InstructionOp.BLSHK,
   [ts.SyntaxKind.GreaterThanGreaterThanGreaterThanToken]: InstructionOp.BRSHK,
   [ts.SyntaxKind.GreaterThanGreaterThanToken]: InstructionOp.BARSHK

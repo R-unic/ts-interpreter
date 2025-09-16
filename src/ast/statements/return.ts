@@ -1,4 +1,4 @@
-import ts, { findAncestor, isFunctionLike } from "typescript";
+import ts, { findAncestor, isBlock, isFunctionLike } from "typescript";
 
 import { loadNull } from "@/bytecode/utility";
 import { RETURN } from "@/bytecode/instructions/return";
@@ -31,6 +31,11 @@ export function visitReturnStatement(codegen: Codegen, node: ts.ReturnStatement)
     throw new Error("No function label found to return from");
 
   if (label.inlined) {
+    const children = functionDeclaration.getChildren();
+    const lastChild = children[children.length - 1];
+    if (lastChild && isBlock(lastChild) && lastChild.statements[lastChild.statements.length - 1] === node)
+      return;
+
     const returnJump = JMP(-1);
     label.inlineReturns.add(returnJump);
     codegen.freeRegister(register);

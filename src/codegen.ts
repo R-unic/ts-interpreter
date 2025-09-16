@@ -29,12 +29,12 @@ import ts, {
   isInterfaceDeclaration,
   isTypeAliasDeclaration,
   isShorthandPropertyAssignment,
-  isPropertyName,
-  isComputedPropertyName,
   isEnumMember
 } from "typescript";
 import assert from "assert";
 
+import { getCallMacro } from "@/ast/macros/call";
+import { getPropertyAccessMacro } from "@/ast/macros/property-access";
 import { canInlineFunction, canInlineVariable, getTypeOfNode } from "@/ast/utility";
 import { getTargetRegister, maybeGetSourceRegister, maybeGetTargetRegister } from "@/bytecode/utility";
 import { visitTrueLiteral } from "@/ast/expressions/true-literal";
@@ -64,15 +64,13 @@ import { visitPrefixUnaryExpression } from "./ast/expressions/prefix-unary";
 import { visitPostfixUnaryExpression } from "./ast/expressions/postfix-unary";
 import { visitObjectLiteralExpression } from "./ast/expressions/object-literal";
 import { binaryJumpInstruction } from "./bytecode/instructions/binary-jump";
+import { isLOADV } from "@/bytecode/instructions/loadv";
 import { RETURN } from "@/bytecode/instructions/return";
 import { HALT } from "@/bytecode/instructions/halt";
-import { JZ } from "./bytecode/instructions/jz";
+import { JZ } from "@/bytecode/instructions/jz";
 import { InstructionOp, type Bytecode, type Instruction, type ConditionJumpInstruction } from "@/bytecode/structs";
 import type { InstructionCALL } from "@/bytecode/instructions/call";
 import type { InstructionJMP } from "@/bytecode/instructions/jmp";
-import { getPropertyAccessMacro } from "./ast/macros/property-access";
-import { isLOADV } from "./bytecode/instructions/loadv";
-import { getCallMacro } from "./ast/macros/call";
 
 interface FunctionLabel {
   readonly declaration: ts.FunctionDeclaration;
