@@ -11,7 +11,7 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
     return macro();
 
   const functionSymbol = codegen.getSymbol(node.expression);
-  const label = codegen.getFunctionLabel(functionSymbol);
+  const label = codegen.getFunctionLabel(node.expression);
   if (label === undefined)
     throw new Error("Failed to find function label for function: " + functionSymbol?.name);
 
@@ -20,6 +20,7 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
   let i = 0;
   for (const parameter of fn.parameters) {
     assert(isIdentifier(parameter.name), "Binding patterns not yet supported");
+
     const symbol = codegen.getSymbol(parameter.name);
     assert(symbol, "No parameter symbol");
 
@@ -39,6 +40,7 @@ export function visitCallExpression(codegen: Codegen, node: ts.CallExpression): 
     } else {
       codegen.undoLastAddition();
       codegen.addCallToPatch(functionSymbol!, codegen.pushInstruction(CALL(-1)));
+
       // TODO: somehow accurately predict which path it will take to give the right return register
       for (const register of label.returnRegisters)
         codegen.closestFreeRegister = register + 1;

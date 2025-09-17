@@ -10,12 +10,12 @@ export function visitReturnStatement(codegen: Codegen, node: ts.ReturnStatement)
   if (!functionDeclaration)
     throw new Error("Failed to find return statement's function declaration");
 
-  const symbol = functionDeclaration.name !== undefined
-    ? codegen.getSymbol(functionDeclaration.name) ?? codegen.getSymbol(functionDeclaration)
-    : codegen.getSymbol(functionDeclaration);
+  const label = codegen.getFunctionLabel(functionDeclaration.name ?? functionDeclaration);
+  if (!label)
+    throw new Error("No function label found to return from");
 
-  if (!symbol)
-    throw new Error("Failed to find return statement's function symbol");
+  if (codegen.getFunctionLabel(node.expression) !== undefined)
+    return;
 
   let register: number;
   if (node.expression) {
@@ -25,10 +25,6 @@ export function visitReturnStatement(codegen: Codegen, node: ts.ReturnStatement)
     register = codegen.allocRegister();
     codegen.pushInstruction(loadNull(register));
   }
-
-  const label = codegen.getFunctionLabel(symbol);
-  if (!label)
-    throw new Error("No function label found to return from");
 
   if (label.inlined) {
     const children = functionDeclaration.getChildren();

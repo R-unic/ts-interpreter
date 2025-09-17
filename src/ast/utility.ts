@@ -96,7 +96,65 @@ export function canInlineVariable(node: ts.VariableDeclaration, codegen: Codegen
   const list = node.parent as ts.VariableDeclarationList;
   return (list.flags & ts.NodeFlags.Const) !== 0
     && node.initializer !== undefined
-    && codegen.isConstant(node.initializer);
+    && (codegen.isConstant(node.initializer) || codegen.getFunctionLabel(node.initializer) !== undefined);
+}
+
+/** Returns true for simple functions -- those with no loops, closures, or direct recursion */
+export function canInlineFunction(fn: ts.FunctionLikeDeclaration, codegen: Codegen): boolean {
+  if (fn.body === undefined)
+    return false;
+  if (isExpression(fn.body))
+    return true;
+
+  const bodyStatements = fn.body.statements;
+  return !isDirectlyRecursive(fn, codegen)
+    && !bodyStatements.some(isLoop) // no loops
+    && !bodyStatements.some(statement => isFunctionLike(statement) && !canInlineFunction(statement, codegen)) // no non-inlined functions
+}
+
+/** Returns true if the function calls itself (direct recursion)  */
+function isDirectlyRecursive(
+  fn: ts.FunctionLikeDeclaration,
+  codegen: Codegen
+): boolean {
+  if (!fn.body) return false;
+
+  const fnNameNode = (fn as ts.FunctionDeclaration | ts.MethodDeclaration).name;
+  const fnSymbol = codegen.getSymbol(fnNameNode ?? fn);
+  if (!fnSymbol)
+    return false;
+
+  return containsCallSymbol(fn.body, fnSymbol, codegen);
+}
+
+function containsCallSymbol(
+  node: ts.Node,
+  fnSymbol: ts.Symbol,
+  codegen: Codegen
+): boolean {
+  let recursive = false;
+
+  function visit(n: ts.Node): void {
+    if (ts.isCallExpression(n) || ts.isNewExpression(n)) {
+      const calledSymbol = codegen.getSymbol(n.expression);
+      if (calledSymbol === fnSymbol) {
+        recursive = true;
+        return;
+      }
+    }
+    ts.forEachChild(n, visit);
+  }
+
+  visit(node);
+  return recursive;
+}
+
+export function isLoop(node: ts.Statement): boolean {
+  return isWhileStatement(node)
+    || isDoStatement(node)
+    || isForStatement(node)
+    || isForInStatement(node)
+    || isForOfStatement(node);
 }
 
 export function hasModifier(node: ts.HasModifiers, kind: ts.ModifierSyntaxKind): boolean {
@@ -162,62 +220,6 @@ export function getTypeOfNode(node: ts.Node, checker: ts.TypeChecker): ts.Type |
   } catch {
     return undefined;
   }
-}
-
-/** Returns true for simple functions -- those with no loops, closures, or direct recursion */
-export function canInlineFunction(fn: ts.FunctionDeclaration, codegen: Codegen): boolean {
-  if (fn.body === undefined)
-    return false;
-
-  const bodyStatements = fn.body.statements;
-  return !isDirectlyRecursive(fn, codegen)
-    && !bodyStatements.some(isLoop) // no loops
-    && !bodyStatements.some(isFunctionLike) // no closures
-}
-
-/** Returns true if the function calls itself (direct recursion)  */
-function isDirectlyRecursive(
-  fn: ts.FunctionLikeDeclaration,
-  codegen: Codegen
-): boolean {
-  if (!fn.body) return false;
-
-  const fnNameNode = (fn as ts.FunctionDeclaration | ts.MethodDeclaration).name;
-  const fnSymbol = codegen.getSymbol(fnNameNode ?? fn);
-  if (!fnSymbol)
-    return false;
-
-  return containsCallSymbol(fn.body, fnSymbol, codegen);
-}
-
-function containsCallSymbol(
-  node: ts.Node,
-  fnSymbol: ts.Symbol,
-  codegen: Codegen
-): boolean {
-  let recursive = false;
-
-  function visit(n: ts.Node): void {
-    if (ts.isCallExpression(n) || ts.isNewExpression(n)) {
-      const calledSymbol = codegen.getSymbol(n.expression);
-      if (calledSymbol === fnSymbol) {
-        recursive = true;
-        return;
-      }
-    }
-    ts.forEachChild(n, visit);
-  }
-
-  visit(node);
-  return recursive;
-}
-
-export function isLoop(node: ts.Statement): boolean {
-  return isWhileStatement(node)
-    || isDoStatement(node)
-    || isForStatement(node)
-    || isForInStatement(node)
-    || isForOfStatement(node);
 }
 
 export function isStandaloneExpression(node: ts.Node): boolean {

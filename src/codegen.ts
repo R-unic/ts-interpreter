@@ -29,7 +29,8 @@ import ts, {
   isInterfaceDeclaration,
   isTypeAliasDeclaration,
   isShorthandPropertyAssignment,
-  isEnumMember
+  isEnumMember,
+  isFunctionLike
 } from "typescript";
 import assert from "assert";
 
@@ -288,7 +289,23 @@ export class Codegen {
     this.toPatch.calls.set(symbol, callsToPatch);
   }
 
-  public getFunctionLabel(symbol: ts.Symbol | undefined): FunctionLabel | undefined {
+  public getFunctionLabel(node: ts.Node | undefined): FunctionLabel | undefined {
+    if (node === undefined) return;
+
+    this.visit(node);
+    this.undoLastAddition();
+
+    const type = this.getType(node);
+    let symbol: ts.Symbol | undefined;
+    if (type === undefined)
+      symbol = this.getSymbol(node);
+    else {
+      // TODO: fuck, union/intersection shit
+      const callSignatures = type.getCallSignatures();
+      const declaration = callSignatures[0]?.getDeclaration();
+      symbol = this.getSymbol(declaration?.name ?? node);
+    }
+
     if (symbol === undefined) return;
     return this.functions.get(symbol);
   }
